@@ -90,3 +90,23 @@ I definitely did not use the exact same statistical test for every question. The
 I used **Tableau** for several of the comparison charts and **Python/Matplotlib** for the spatial court maps and some of the more customized visualizations.
 
 One thing I learned pretty quickly was that a graph can look dramatic even when there are barely any observations behind it 🤦‍♀️. Because of that, I included sample sizes in my visualizations and tried to be careful about separating an interesting pattern from something I could actually support statistically.
+## Key Findings
+
+### 1. Better passes were strongly connected to first-ball side-out success
+
+This was probably the clearest pattern I found in the pilot data. As pass rating increased, first-ball side-out success increased with it.
+
+- **0-pass:** 0.0% (0/16)
+- **1-pass:** 3.7% (1/27)
+- **2-pass:** 15.6% (7/45)
+- **3-pass:** 47.6% (10/21)
+
+<p align="center">
+  <img src="01_pass_rating.png" alt="First-ball side-out success by pass rating" width="700">
+</p>
+
+A logistic regression also found a statistically significant positive relationship between pass rating and first-ball side-out success (**β = 1.284, p = .014**).
+
+I expected better passes to lead to more successful side-outs, so that part was not exactly shocking 😭. What surprised me more was how large the difference was. A 3-pass resulted in a first-ball side-out almost half the time in this dataset, compared with only 15.6% for a 2-pass.
+
+At the same time, I don't want to treat these percentages as universal volleyball benchmarks. This is still a small pilot dataset, and one of my next goals is to see whether the same pattern holds as I collect more rallies.

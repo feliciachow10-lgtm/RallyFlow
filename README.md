@@ -15,7 +15,7 @@ That made me curious about what we might be missing when we reduce an entire ser
 I use RallyFlow while watching match film to record what happens from the serve through the first attack. Instead of only recording the outcome of the play, I wanted to capture what actually happened on the court leading up to it.
 
 <p align="center">
-  <img src="rallyflow_interface.png" alt="RallyFlow data collection interface" width="900">
+  <img src="ChatGPT Image Sep 26, 2026, 09_46_43 PM.png" alt="RallyFlow data collection interface" width="900">
 </p>
 
 *RallyFlow's annotation interface combines video review with interactive court coordinates and rally-level data collection.*

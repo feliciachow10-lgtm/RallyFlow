@@ -129,6 +129,10 @@ Observed first-ball side-out rates were:
 
 Location 3 had the highest observed first-ball side-out rate at **38.5%**, followed by locations 2 and 4.
 
+<p align="center">
+  <img src="../04_set_location.png" alt="First-ball side-out success by set location" width="700">
+</p>
+
 ### What I Took From This
 
 At first glance, location 3 looks really interesting. The problem is that the sample sizes are super uneven. Locations 1 and 5, for example, only had two and three observations.
@@ -159,6 +163,10 @@ Among hard-driven attacks with usable destination-depth data:
 
 The observed kill rates differed, but the middle and deep groups were tiny. A permutation test found **no statistically significant association between attack depth and kill outcome (p = .871)**.
 
+<p align="center">
+  <img src="../05_attack_destination.png" alt="Attack destination court map" width="700">
+</p>
+
 ### What I Took From This
 
 This analysis was actually a good example of the pilot changing how I thought about my own data.
@@ -185,6 +193,10 @@ Among normal attacks:
 - **2 blockers:** 24% first-ball side-out success (12/50)
 
 The observed success rate was higher against one blocker, but the difference was **not statistically significant (p = .324)**.
+
+<p align="center">
+  <img src="../06_blockers_faced.png" alt="First-ball side-out success by blockers faced" width="700">
+</p>
 
 ### What I Took From This
 
@@ -214,6 +226,10 @@ Observed first-ball side-out rates were:
 | R6 | 5 | 10 | 50.0% |
 
 R6 had the highest observed first-ball side-out rate at **50% (5/10)**, while R1–R5 ranged from about 10–16%.
+
+<p align="center">
+  <img src="../07_rotation.png" alt="First-ball side-out success by rotation" width="700">
+</p>
 
 ### What I Took From This
 
@@ -282,6 +298,10 @@ The largest average travel distances were:
 The smallest was:
 
 - **R5:** 3.71 m
+
+<p align="center">
+  <img src="../09_setter_travel.png" alt="Average setter travel by rotation" width="700">
+</p>
 
 ### What I Took From This
 

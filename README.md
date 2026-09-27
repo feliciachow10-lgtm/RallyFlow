@@ -129,7 +129,7 @@ I mapped where the setter contacted each pass relative to the ideal target. Of t
 There was also a noticeable sideways imbalance: **36.5%** of misses were primarily in the −X direction compared with **11.5%** in the +X direction.
 
 <p align="center">
-  <img src="Where do passes miss the ideal target? .png" alt="Directional distribution of passes missing the ideal target" width="700">
+  <img src="Where do passes miss the ideal target?.png" alt="Directional distribution of passes missing the ideal target" width="700">
 </p>
 
 Instead of just saying that a pass was "off target," RallyFlow lets me see *how* it was off target. I think this could eventually be useful for identifying team-specific passing tendencies or even creating more actionable feedback for players.

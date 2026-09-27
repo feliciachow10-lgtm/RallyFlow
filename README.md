@@ -1,21 +1,26 @@
 # RallyFlow 🏐
 
-### A rally-level volleyball analytics tool for studying first-ball side-out performance
+### Looking beyond the 0–3 pass rating to understand what actually creates a successful first-ball side-out
 
-RallyFlow is a volleyball data collection and analytics project designed to investigate what happens between serve receive and a team's first attack.
+I started RallyFlow because, as a volleyball player, I kept wondering how much a traditional 0–3 pass rating actually tells us. Two passes can get the same rating but put the setter in completely different positions, change which hitters are available, and lead to very different attacks.
 
-Traditional pass ratings summarize reception quality, but they do not fully capture where the pass goes, how far the setter must move, whether the offense stays in-system, what attacking options become available, or how these factors relate to first-ball side-out success.
-
-RallyFlow was built to collect these spatial and contextual variables at the rally level and analyze how they interact.
+That made me curious about what we might be missing when we reduce an entire serve-receive play to one number. I built RallyFlow to track what happens throughout the play—from where the pass goes and how far the setter moves to where the attack lands—and then analyze how those factors relate to first-ball side-out success.
 
 ## Research Question
 
 **What factors are associated with successful first-ball side-outs in volleyball?**
+
 ## How RallyFlow Works
 
-RallyFlow is a custom data-collection tool built to record the sequence of events from serve receive through the first attack.
+I use RallyFlow while watching match film to record what happens from the serve through the first attack. Instead of only recording the outcome of the play, I wanted to capture what actually happened on the court leading up to it.
 
-For each rally, the tool can record information across four stages:
+<p align="center">
+  <img src="rallyflow_interface.png" alt="RallyFlow data collection interface" width="900">
+</p>
+
+*RallyFlow's annotation interface combines video review with interactive court coordinates and rally-level data collection.*
+
+For each rally, I can record:
 
 **Serve Receive**
 - Pass rating (0–3)
@@ -41,9 +46,24 @@ For each rally, the tool can record information across four stages:
 - Attack outcome
 - First-ball side-out success
 
-This creates a rally-level dataset that connects traditional volleyball statistics with spatial and contextual information.
-<p align="center">
-  <img src="ChatGPT Image Sep 26, 2026, 09_46_43 PM.png" alt="RallyFlow data collection interface" width="900">
-</p>
+Putting all of this together creates a rally-level dataset where I can look at not only whether a team sided out, but also what happened throughout the play that may have contributed to that result.
 
-*RallyFlow's annotation interface combines video review, interactive court coordinates, rotation tracking, and rally-level serve-receive, setter, attack, and outcome data collection.*
+## Pilot Study
+
+I recently finished collecting my first **121 rallies**. Since this is still a pretty small dataset, I am treating this as a pilot study rather than trying to make broad conclusions about volleyball from it.
+
+My main goal with this first analysis was actually to test RallyFlow itself: **Am I collecting data that can reveal useful patterns?** I also wanted to see which questions seem worth investigating further and where my data-collection process could improve before I build a much larger dataset.
+
+Because some measurements do not apply to every rally or were missing in the original data, the sample size is different for each analysis.
+
+### What I Wanted to Investigate
+
+1. Does pass quality relate to first-ball side-out success?
+2. What happens to first-ball side-out success as the setter moves farther from the ideal passing target?
+3. How much does being in-system vs. out-of-system matter?
+4. Does set location relate to first-ball side-out success?
+5. Where are attacks landing, and does attack destination relate to effectiveness?
+6. How does the number of blockers faced relate to first-ball side-out success?
+7. Does first-ball side-out success differ by rotation?
+8. When passes miss the ideal target, where are they actually going?
+9. How much does the setter have to travel in each rotation?

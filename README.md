@@ -102,7 +102,7 @@ This was probably the clearest pattern I found in the pilot data. As pass rating
 - **3-pass:** 47.6% (10/21)
 
 <p align="center">
-  <img src="01_pass_rating.png" alt="First-ball side-out success by pass rating" width="700">
+  <img src="First-Ball Side-Out Success by Pass Rating.png" alt="First-ball side-out success by pass rating" width="700">
 </p>
 
 A logistic regression also found a statistically significant positive relationship between pass rating and first-ball side-out success (**β = 1.284, p = .014**).

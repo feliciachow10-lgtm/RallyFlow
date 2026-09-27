@@ -15,7 +15,7 @@ That made me curious about what we might be missing when we reduce an entire ser
 I use RallyFlow while watching match film to record what happens from the serve through the first attack. Instead of only recording the outcome of the play, I wanted to capture what actually happened on the court leading up to it.
 
 <p align="center">
-  <img src="ChatGPT Image Sep 26, 2026, 09_46_43 PM.png" alt="RallyFlow data collection interface" width="900">
+  <img src="rallyflow_interface.png." alt="RallyFlow data collection interface" width="900">
 </p>
 
 *RallyFlow's annotation interface combines video review with interactive court coordinates and rally-level data collection.*
@@ -99,7 +99,7 @@ This was probably the most expected result, but I was honestly happy to see it b
 First-ball side-out success increased from **0% on 0-passes to 47.6% on 3-passes**. Logistic regression also found a statistically significant positive relationship between pass rating and first-ball side-out success (**β = 1.284, p = .014**).
 
 <p align="center">
-  <img src="First-Ball Side-Out Success by Pass Rating.png" alt="First-ball side-out success by pass rating" width="700">
+  <img src="01_pass_rating.png" alt="First-ball side-out success by pass rating" width="700">
 </p>
 
 The interesting part for me was how quickly the success rate changed as pass quality improved. I definitely want to see whether that pattern stays similar once the dataset becomes much larger.
@@ -113,7 +113,7 @@ Instead of only giving a pass a 0–3 rating, I could measure how far the setter
 Successful first-ball side-outs had an average setter displacement of **1.52 m**, compared with **2.30 m** on unsuccessful attempts. As displacement increased, the predicted probability of a successful first-ball side-out decreased (**β = −0.683, p = .026, n = 67**).
 
 <p align="center">
-  <img src="Setter Displacement.png" alt="Setter displacement and first-ball side-out success" width="700">
+  <img src="02_setter_displacement.png" alt="Setter displacement and first-ball side-out success" width="700">
 </p>
 
 There is one pretty important catch: pass rating and setter displacement were strongly related (**r = −0.793**), which makes sense. Better passes usually end up closer to the setter's target.
@@ -143,7 +143,7 @@ First-ball side-out success was **26.2% for in-system rallies (17/65)** compared
 Fisher's exact test found evidence of an association between system status and first-ball side-out success (**p = .0335**).
 
 <p align="center">
-  <img src="In-System vs First-Ball Side-Out.png" alt="First-ball side-out success by system status" width="700">
+  <img src="03_system_status.png" alt="First-ball side-out success by system status" width="700">
 </p>
 
 Again, the general direction is not exactly shocking—being in-system is supposed to be good 😭. What interests me more is eventually connecting this result back to the spatial measurements. For example: **How much setter displacement does it usually take before an offense actually becomes out-of-system?**

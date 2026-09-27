@@ -42,3 +42,8 @@ For each rally, the tool can record information across four stages:
 - First-ball side-out success
 
 This creates a rally-level dataset that connects traditional volleyball statistics with spatial and contextual information.
+<p align="center">
+  <img src="rallyflow_interface.png" alt="RallyFlow data collection interface" width="900">
+</p>
+
+*RallyFlow's annotation interface combines video review, interactive court coordinates, rotation tracking, and rally-level serve-receive, setter, attack, and outcome data collection.*

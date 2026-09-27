@@ -99,7 +99,7 @@ This was probably the most expected result, but I was honestly happy to see it b
 First-ball side-out success increased from **0% on 0-passes to 47.6% on 3-passes**. Logistic regression also found a statistically significant positive relationship between pass rating and first-ball side-out success (**β = 1.284, p = .014**).
 
 <p align="center">
-  <img src="03_system_status.png" alt="First-ball side-out success by pass rating" width="700">
+  <img src="01_pass_rating.png" alt="First-ball side-out success by pass rating" width="700">
 </p>
 
 The interesting part for me was how quickly the success rate changed as pass quality improved. I definitely want to see whether that pattern stays similar once the dataset becomes much larger.
@@ -143,7 +143,7 @@ First-ball side-out success was **26.2% for in-system rallies (17/65)** compared
 Fisher's exact test found evidence of an association between system status and first-ball side-out success (**p = .0335**).
 
 <p align="center">
-  <img src="01_pass_rating.png" alt="First-ball side-out success by system status" width="700">
+  <img src="03_system_status.png" alt="First-ball side-out success by system status" width="700">
 </p>
 
 Again, the general direction is not exactly shocking—being in-system is supposed to be good 😭. What interests me more is eventually connecting this result back to the spatial measurements. For example: **How much setter displacement does it usually take before an offense actually becomes out-of-system?**

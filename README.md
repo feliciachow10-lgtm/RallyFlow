@@ -129,7 +129,7 @@ I mapped where the setter contacted each pass relative to the ideal target. Of t
 There was also a noticeable sideways imbalance: **36.5%** of misses were primarily in the −X direction compared with **11.5%** in the +X direction.
 
 <p align="center">
-  <img src="Where do passes miss the ideal target?.png" alt="Directional distribution of passes missing the ideal target" width="700">
+  <img src="Where do passes miss the ideal target? .png" alt="Directional distribution of passes missing the ideal target" width="700">
 </p>
 
 Instead of just saying that a pass was "off target," RallyFlow lets me see *how* it was off target. I think this could eventually be useful for identifying team-specific passing tendencies or even creating more actionable feedback for players.
@@ -143,7 +143,7 @@ First-ball side-out success was **26.2% for in-system rallies (17/65)** compared
 Fisher's exact test found evidence of an association between system status and first-ball side-out success (**p = .0335**).
 
 <p align="center">
-  <img src="03_system_status.png" alt="First-ball side-out success by system status" width="700">
+  <img src="In-System vs First-Ball Side-Out.png" alt="First-ball side-out success by system status" width="700">
 </p>
 
 Again, the general direction is not exactly shocking—being in-system is supposed to be good 😭. What interests me more is eventually connecting this result back to the spatial measurements. For example: **How much setter displacement does it usually take before an offense actually becomes out-of-system?**

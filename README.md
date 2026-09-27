@@ -43,7 +43,7 @@ For each rally, the tool can record information across four stages:
 
 This creates a rally-level dataset that connects traditional volleyball statistics with spatial and contextual information.
 <p align="center">
-  <img src="rallyflow_interface.png" alt="RallyFlow data collection interface" width="900">
+  <img src="ChatGPT Image Sep 26, 2026, 09_46_43 PM.png" alt="RallyFlow data collection interface" width="900">
 </p>
 
 *RallyFlow's annotation interface combines video review, interactive court coordinates, rotation tracking, and rally-level serve-receive, setter, attack, and outcome data collection.*

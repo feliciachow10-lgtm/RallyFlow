@@ -67,3 +67,26 @@ Because some measurements do not apply to every rally or were missing in the ori
 7. Does first-ball side-out success differ by rotation?
 8. When passes miss the ideal target, where are they actually going?
 9. How much does the setter have to travel in each rotation?
+## Methods
+
+After collecting the 121 rallies, I cleaned the dataset and analyzed it using **Python, Google Colab, and Tableau**.
+
+I definitely did not use the exact same statistical test for every question. The variables are different, so I tried to choose a method that actually made sense for each relationship I was looking at.
+
+### How I Analyzed the Data
+
+- **Logistic regression** — I used this when I wanted to see how a numerical variable, like pass rating or setter displacement, related to the probability of a successful first-ball side-out.
+
+- **Fisher's exact test** — I used this for categorical comparisons with small sample sizes, including in-system vs. out-of-system rallies.
+
+- **Permutation testing** — I used this when some groups had very few observations and the assumptions behind a traditional test were questionable.
+
+- **ANOVA** — I used this to compare average setter travel across the six rotations.
+
+- **Descriptive analysis** — For several of the more exploratory questions, I compared percentages, counts, averages, and spatial patterns without trying to make a strong statistical conclusion from such a small dataset.
+
+### Visualizing the Data
+
+I used **Tableau** for several of the comparison charts and **Python/Matplotlib** for the spatial court maps and some of the more customized visualizations.
+
+One thing I learned pretty quickly was that a graph can look dramatic even when there are barely any observations behind it 🤦‍♀️. Because of that, I included sample sizes in my visualizations and tried to be careful about separating an interesting pattern from something I could actually support statistically.

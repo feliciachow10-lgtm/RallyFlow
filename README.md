@@ -70,6 +70,8 @@ Because some measurements do not apply to every rally or were missing in the ori
 8. When passes miss the ideal target, where are they actually going?
 9. How much does the setter have to travel in each rotation?
 
+**Tools:** Python · pandas · Matplotlib · statsmodels · SciPy · Tableau · Google Colab
+
 ## Methods
 
 After collecting the rallies, I cleaned the dataset and analyzed it using **Python, Google Colab, and Tableau**.

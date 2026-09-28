@@ -145,7 +145,7 @@ Because of that, I do not think this pilot can tell me what the "best" set locat
 
 ### Question
 
-**What spatial attack selection is associated with first-ball attack effectiveness?**
+**Where are first-ball attacks landing, and does attack destination relate to attack effectiveness?**
 
 ### Results
 

@@ -204,3 +204,8 @@ RallyFlow is still very much a work in progress. I am sharing the project becaus
 I am especially interested in feedback on the **research design, spatial measurements, statistical methods, and what questions would be most valuable to investigate with a larger dataset**.
 
 If you work in sports analytics, statistics, data science, biomechanics, computer vision, or a related area and have thoughts on the project, I would genuinely love to hear them.
+## Explore the Project
+
+- 📊 [Full Pilot Analysis](analysis/pilot_analysis.md) — all nine research questions, results, and visualizations
+- 💻 [Analysis Notebook](notebooks/rallyflow_pilot_analysis.ipynb) — Python code used for the pilot analysis
+- 🗂️ [Dataset Documentation](data/README.md) — variables, structure, sample-size notes, and data availability

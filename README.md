@@ -70,8 +70,6 @@ Because some measurements do not apply to every rally or were missing in the ori
 8. When passes miss the ideal target, where are they actually going?
 9. How much does the setter have to travel in each rotation?
 
-**Tools:** Python · pandas · Matplotlib · statsmodels · SciPy · Tableau · Google Colab
-
 ## Methods
 
 After collecting the rallies, I cleaned the dataset and analyzed it using **Python, Google Colab, and Tableau**.
@@ -84,7 +82,7 @@ I definitely did not use the exact same statistical test for every question. The
 - **ANOVA** — to compare average setter travel across rotations.
 - **Descriptive analysis** — for more exploratory questions where I compared percentages, averages, counts, and spatial patterns without trying to make a strong statistical conclusion.
 
-I used **Tableau** for several comparison charts and **Python/Matplotlib** for the spatial court maps and more customized visualizations.
+**Tools:** Python · pandas · Matplotlib · statsmodels · SciPy · Tableau · Google Colab
 
 One thing I learned pretty quickly was that a graph can look dramatic even when there are barely any observations behind it 😭. Because of that, I started including sample sizes in my visualizations and tried to separate an interesting pattern from something the data could actually support.
 

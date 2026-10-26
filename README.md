@@ -84,7 +84,7 @@ I definitely did not use the exact same statistical test for every question. The
 
 **Tools:** Python · pandas · Matplotlib · statsmodels · SciPy · Tableau · Google Colab
 
-One thing I learned pretty quickly was that a graph can look dramatic even when there are barely any observations behind it 😭. Because of that, I started including sample sizes in my visualizations and tried to separate an interesting pattern from something the data could actually support.
+One thing I learned pretty quickly was that a graph can look dramatic even when there are barely any observations behind it. Because of that, I started including sample sizes in my visualizations and tried to separate an interesting pattern from something the data could actually support.
 
 ## Key Findings
 
@@ -146,7 +146,7 @@ Fisher's exact test found evidence of an association between system status and f
   <img src="03_system_status.png" alt="First-ball side-out success by system status" width="700">
 </p>
 
-Again, the general direction is not exactly shocking—being in-system is supposed to be good 😭. What interests me more is eventually connecting this result back to the spatial measurements. For example: **How much setter displacement does it usually take before an offense actually becomes out-of-system?**
+Again, the general direction is not exactly shocking—being in-system is supposed to be good. What interests me more is eventually connecting this result back to the spatial measurements. For example: **How much setter displacement does it usually take before an offense actually becomes out-of-system?**
 
 That is the kind of question I would like RallyFlow to answer with a larger dataset.
 

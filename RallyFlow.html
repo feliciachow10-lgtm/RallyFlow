@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RallyFlow Studio — Volleyball Film Analytics</title>
+<style>
+:root{--bg:#f4f1ea;--panel:#fff;--ink:#18212a;--muted:#68717b;--line:#d8d1c5;--accent:#174f5f;--danger:#a7462b;--good:#e8f3ec;--warn:#fff3d9;--edit:#eef5f7}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:1500px;margin:auto;padding:20px}.layout{display:grid;grid-template-columns:1.3fr .7fr;gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:18px}
+h1{margin:0}.sub,.hint{color:var(--muted)}.hint{font-size:12px;line-height:1.45}
+video{width:100%;max-height:360px;background:#000;border-radius:10px}
+.toolbar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+button{border:0;border-radius:9px;padding:10px;font-weight:700;cursor:pointer}.mode{background:#e7ecee}.mode.active,.primary{background:var(--accent);color:#fff}
+.secondary{background:#ece8df}.danger{background:#f7e5df;color:var(--danger)}.mini{padding:6px 9px;font-size:11px;border-radius:7px}
+.courts{display:grid;grid-template-columns:1fr 1fr;gap:14px}.court-title{font-weight:700;margin-bottom:7px}
+canvas{width:100%;aspect-ratio:1;border:1px solid var(--line);border-radius:10px;background:#e7c98f;cursor:crosshair}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:9px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.field{margin-bottom:10px}label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:white}
+textarea{min-height:65px}.section{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}.section h3{margin:0 0 10px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.metric{background:#f7f8f8;border:1px solid var(--line);border-radius:9px;padding:9px}.metric span{font-size:11px;color:var(--muted);display:block}.metric b{font-size:17px}
+.check{display:flex;align-items:center;gap:8px;margin:8px 0}.check input{width:auto}.check label{margin:0}
+.full{width:100%;margin-top:8px}.resultbox{padding:12px;border-radius:10px;background:var(--warn);border:1px solid #ead7a3}
+.resultbox.auto{background:var(--good);border-color:#bdd8c5}
+.edit-banner{display:none;background:var(--edit);border:2px solid var(--accent);border-radius:10px;padding:11px;margin-bottom:12px}
+.edit-banner.show{display:block}.edit-actions{display:none;grid-template-columns:1fr 1fr;gap:8px}.edit-actions.show{display:grid}
+.table-wrap{overflow:auto;max-height:640px;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:max-content;min-width:100%}th,td{padding:7px;border-bottom:1px solid var(--line);font-size:11px;white-space:nowrap;text-align:left}
+th{background:#f2f3f3;position:sticky;top:0;z-index:2}
+th.rownum,td.rownum{position:sticky;left:0;z-index:3;background:#f7f7f7;text-align:right;min-width:44px;font-weight:700;border-right:1px solid var(--line)}
+th.rownum{z-index:4;background:#e9ecec}
+tr.data-row{cursor:pointer}tr.data-row:hover td{background:#f6fafb}tr.data-row:hover td.rownum{background:#eef4f5}
+tr.selected td{background:#e8f2f4!important}tr.selected td.rownum{background:#dcecef!important}
+.actions-cell{display:flex;gap:5px}.file-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.import-label{display:block;background:#ece8df;border-radius:9px;padding:10px;text-align:center;font-weight:700;cursor:pointer}.import-label input{display:none}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}.courts{grid-template-columns:1fr}.toolbar{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>RallyFlow Studio</h1>
+<p class="sub">Serve-receive and first-ball offense annotation — now with editable saved rallies.</p>
+
+<div class="layout">
+<div>
+<div class="card">
+<h3>Film Review</h3>
+<input id="videoUpload" type="file" accept="video/*">
+<video id="video" controls></video>
+<div class="row" style="margin-top:8px">
+<button class="secondary" id="captureTime">Use Current Video Time</button>
+<div class="field"><label>Rally Timestamp</label><input id="videoTime" placeholder="MM:SS"></div>
+</div>
+</div>
+
+<div class="card">
+<div class="edit-banner" id="editBanner"><b id="editTitle">Editing Rally</b><div class="hint">The saved dropdowns and court points have been restored. Make changes, then choose Update Rally or Cancel Edit.</div></div>
+
+<div class="toolbar" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
+<button class="mode active" id="plotRallyTab">Plot Rally</button>
+<button class="mode" id="teamSetupTab">Edit Team Court Setup</button>
+</div>
+
+<div id="plotRallyControls">
+<div class="toolbar">
+<button class="mode rally-mode active" data-mode="serveOrigin">Serve origin</button>
+<button class="mode rally-mode" id="untouchedAceLandingMode" data-mode="serveLanding" disabled>Untouched ace landing ONLY</button>
+<button class="mode rally-mode" data-mode="passContact">Pass contact</button>
+<button class="mode rally-mode" id="setterContactMode" data-mode="setterContact">Second contact</button>
+<button class="mode rally-mode" id="attackContactMode" data-mode="attackContact">Attack contact</button>
+<button class="mode rally-mode" data-mode="attackDestination">Attack destination</button>
+</div>
+<div class="hint"><b>Untouched ace landing ONLY</b> is enabled only when Serve Result is “Untouched ace.”</div>
+</div>
+
+<div id="teamSetupControls" style="display:none">
+<div class="resultbox auto" style="margin-bottom:10px">
+<b>Team Court Setup</b>
+<div class="hint">Set these once and RallyFlow will remember them. Choose the ideal passing target or a rotation below, then click the saved location on My Team Court.</div>
+</div>
+<div class="toolbar">
+<button class="mode setup-mode" data-mode="idealTarget">Ideal passing target</button>
+<button class="mode setup-mode" data-rotation="R1">Setter start R1</button>
+<button class="mode setup-mode" data-rotation="R2">Setter start R2</button>
+<button class="mode setup-mode" data-rotation="R3">Setter start R3</button>
+<button class="mode setup-mode" data-rotation="R4">Setter start R4</button>
+<button class="mode setup-mode" data-rotation="R5">Setter start R5</button>
+<button class="mode setup-mode" data-rotation="R6">Setter start R6</button>
+</div>
+<div class="hint" id="setupSummary" style="margin-bottom:8px"></div>
+</div>
+
+<h3>Plot rally points</h3><p class="hint">Second contact means whoever touched the ball second (not necessarily the setter). Setter movement estimates appear only when the setter made that contact.</p><p class="hint">Choose a contact type above, then click its location on the appropriate court.</p><div class="courts">
+<div><div class="court-title">My Team Court</div><canvas id="homeCourt" width="720" height="720"></canvas></div>
+<div><div class="court-title">Opponent Court</div><canvas id="oppCourt" width="720" height="720"></canvas></div>
+</div>
+<div class="metrics">
+<div class="metric"><span>Rallies collected</span><b id="rallyCount">0</b></div>
+<div class="metric"><span>Pass-to-target distance</span><b id="passDeviation">—</b></div>
+<div class="metric"><span>Setter start → target</span><b id="setterToTarget">—</b></div>
+<div class="metric"><span>Target → setter contact (setter only)</span><b id="setterDisplacement">—</b></div>
+<div class="metric"><span>Estimated setter path (setter only)</span><b id="setterTravel">—</b></div>
+<div class="metric"><span>Attack length</span><b id="attackLength">—</b></div>
+<div class="metric"><span>Current rotation</span><b id="rotationMetric">R1</b></div>
+</div>
+<p class="hint">When the setter makes the second contact, estimated setter path: <b style="color:#76549b">solid purple</b> = start → ideal target; <b style="color:#cb6b3d">dashed orange</b> = ideal target → setter contact.</p>
+<p id="status" class="hint">Current mode: Serve origin.</p>
+</div>
+</div>
+
+<div class="card">
+<div class="row"><div class="field"><label>Game</label><input id="matchName" placeholder="vs. Team Name"></div><div class="field"><label>Date</label><input id="matchDate" type="date"></div></div>
+<div class="field"><label>Tournament Name</label><input id="tournamentName"></div>
+<div class="row">
+<div class="field"><label>Set</label><input id="setNumber" type="number" value="1"></div>
+<div class="field"><label>Current Rotation</label><select id="rotation"><option>R1</option><option>R2</option><option>R3</option><option>R4</option><option>R5</option><option>R6</option></select></div>
+</div>
+<input id="startingRotation" type="hidden" value="">
+<div class="check"><input id="autoRotation" type="checkbox" checked><label for="autoRotation">Automatically rotate after the receiving team wins the rally</label></div>
+<p class="hint" id="rotationStatus">Rotation advances only from the FINAL rally result.</p>
+
+<div class="section"><h3>Serve Receive</h3>
+<div class="field"><label>Serve Result</label><select id="serveResult"><option>In play</option><option>Untouched ace</option><option>Opponent service error</option></select></div>
+<div class="row">
+<div class="field"><label>Serve Type</label><select id="serveType"><option>Float</option><option>Jump float</option><option>Topspin</option><option>Standing float</option><option>Unknown</option></select></div>
+<div class="field"><label>Main Passer</label><select id="passer"><option>OH1</option><option>OH2</option><option>Libero</option><option>DS</option><option>Opposite</option><option>Setter</option><option>Middle</option><option>Other</option></select></div>
+</div>
+<div class="row">
+<div class="field"><label>Pass Rating</label><select id="passRating"><option value="">Select rating</option><option value="0">0 — Touched ace/unplayable</option><option value="1">1 — Poor</option><option value="2">2 — Playable</option><option value="3">3 — Perfect</option></select></div>
+<div class="field"><label>Reception Technique</label><select id="receiveTechnique"><option>Platform</option><option>Overhand</option><option>Emergency one-arm</option><option>Unknown</option></select></div>
+</div></div>
+
+<div class="section"><h3>Setter</h3>
+<div class="row">
+<div class="field"><label>Second Contact By</label><select id="secondContact"><option>Setter</option><option>Libero</option><option>Outside</option><option>Middle</option><option>Opposite</option><option>DS</option><option>Other</option></select></div>
+<div class="field"><label>System Status</label><select id="systemStatus"><option>In-system</option><option>Out-of-system</option><option>Broken play</option></select></div>
+</div>
+<div class="field"><label>Set Location / Zone</label><input id="setZone" placeholder="4, 4/5, 6, gap..."></div>
+</div>
+
+<div class="section"><h3>Attack</h3>
+<div class="field"><label>Ball Crossed the Net On</label><select id="crossTouch"><option value="3">Third touch (normal offense)</option><option value="2">Second touch</option><option value="1">First touch</option></select></div>
+<div class="row">
+<div class="field"><label>Attack Role</label><select id="attackRole"><option>Middle</option><option>Outside</option><option>Opposite</option><option>Libero</option><option>DS</option><option>Setter</option><option>Other</option></select></div>
+<div class="field"><label>Attack Type</label><select id="attackType"><option>Hard-driven</option><option>Roll shot</option><option>Tip</option><option>Tool</option><option>Setter dump</option><option>Second-touch attack</option><option>First-touch return</option><option>Down ball</option><option>Free ball</option><option>Other</option></select></div>
+</div>
+<div class="row">
+<div class="field"><label>First Attack Outcome</label><select id="attackOutcome"><option value="">Select outcome</option><option>Kill</option><option>Tool kill</option><option>Error</option><option>Blocked</option><option>Continued</option></select></div>
+<div class="field"><label>Number of Blockers</label><select id="blockers"><option>0</option><option>1</option><option>2</option><option>3</option><option>Unknown</option></select></div>
+</div>
+<p class="hint" id="crossTouchHint">Third touch: record the normal pass → set → attack sequence.</p>
+</div>
+
+<div class="section"><h3>Rally Result</h3>
+<div class="resultbox" id="resultBox">
+<div class="row">
+<div class="field"><label>Successful First-Ball Side-Out?</label><select id="sideOut"><option value="">Select result</option><option>Yes</option><option>No</option><option>N/A</option></select></div>
+<div class="field"><label>Final Rally Result</label><select id="finalRallyResult"><option value="">Select result</option><option value="Won">We Won</option><option value="Lost">We Lost</option></select></div>
+</div>
+<p class="hint" id="resultHint"><b>Important:</b> first-ball side-out and final rally result are separate.</p>
+</div>
+<div class="field"><label>Notes</label><textarea id="notes"></textarea></div>
+</div>
+
+<button class="primary full" id="saveRally">Save Rally</button>
+<div class="edit-actions" id="editActions"><button class="primary" id="updateRally">Update Rally</button><button class="secondary" id="cancelEdit">Cancel Edit</button></div>
+<button class="secondary full" id="clearPoints">Clear Current Points</button>
+<div class="file-tools">
+<button class="secondary" id="exportCsv">Export CSV</button>
+<label class="import-label">Import CSV<input id="importCsv" type="file" accept=".csv,text/csv"></label>
+</div>
+<button class="danger full" id="clearAll">Delete rallies in this match</button>
+</div>
+</div>
+
+<div class="card">
+<h2 style="margin-bottom:5px">Saved Rallies</h2>
+<p class="hint">Click anywhere on a row to edit it. The number at far left is a display row number; it automatically renumbers after a deletion.</p>
+<div class="table-wrap"><table><thead><tr id="headers"></tr></thead><tbody id="rows"></tbody></table></div>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const hc=$('homeCourt'),oc=$('oppCourt'),h=hc.getContext('2d'),o=oc.getContext('2d');
+let mode='serveOrigin',activeTab='plot',setupRotation=null,editingIndex=null;
+let points={serveOrigin:null,serveLanding:null,passContact:null,setterContact:null,attackContact:null,attackDestination:null};
+let editIdealTarget=null,editSetterStart=null;
+let settings=JSON.parse(localStorage.getItem('rallyflowPrototypeSettings')||'null')||{
+  idealTarget:{x:4.5,y:1.5},
+  setterStarts:{R1:{x:5.5,y:3.2},R2:{x:5.5,y:3.2},R3:{x:5.5,y:3.2},R4:{x:5.5,y:3.2},R5:{x:5.5,y:3.2},R6:{x:5.5,y:3.2}}
+};
+let rallies=JSON.parse(localStorage.getItem('rallyflowPrototypeRallies')||'[]');
+let rotationState=JSON.parse(localStorage.getItem('rallyflowPrototypeRotation')||'null')||{setNumber:'1',currentRotation:'R1',startingRotation:'R1'};
+const rotationOrder=['R1','R2','R3','R4','R5','R6'];
+const headers=['match_name','match_date','tournament_name','set_number','video_timestamp','rotation','serve_result','serve_type','serve_origin_x','serve_origin_y','untouched_ace_landing_x','untouched_ace_landing_y','main_passer','reception_technique','pass_rating','pass_contact_x','pass_contact_y','ideal_target_x','ideal_target_y','pass_deviation_m','setter_start_x','setter_start_y','setter_contact_x','setter_contact_y','setter_start_to_target_m','setter_displacement_from_target_m','setter_total_travel_m','second_contact_by','system_status','set_location','ball_crossed_net_on','attack_role','attack_type','attack_contact_x','attack_contact_y','attack_destination_x','attack_destination_y','attack_length_m','blockers_faced','attack_outcome','successful_first_ball_sideout','final_rally_result','overall_sideout_won','notes'];
+
+function uid(){return 'r_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,9)}
+rallies=rallies.map(r=>({...r,_rally_id:r._rally_id||uid()}));
+persist();
+
+function persist(){localStorage.setItem('rallyflowPrototypeRallies',JSON.stringify(rallies))}
+function num(v){const n=parseFloat(v);return Number.isFinite(n)?n:null}
+function pt(x,y){const a=num(x),b=num(y);return a==null||b==null?null:{x:a,y:b}}
+function v(id){return $(id).value}
+function pv(key,axis){return points[key]?points[key][axis]:''}
+function activeIdeal(){return editingIndex!==null&&editIdealTarget?editIdealTarget:settings.idealTarget}
+function setterStart(){return editingIndex!==null&&editSetterStart?editSetterStart:(settings.setterStarts[$('rotation').value]||null)}
+function attackDist(a,b){return (!a||!b)?null:Math.hypot(a.x-b.x,9+a.y-b.y)}
+function dist(a,b){return(!a||!b)?null:Math.hypot(a.x-b.x,a.y-b.y)}
+
+function base(ctx,c,opp=false){
+  ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='#d7c19b';ctx.fillRect(0,0,c.width,c.height);
+  const m=60,size=c.width-2*m;ctx.fillStyle='#e7c98f';ctx.fillRect(m,m,size,size);
+  ctx.strokeStyle='#fff';ctx.lineWidth=4;ctx.strokeRect(m,m,size,size);
+  const attackLineY=opp?(m+2*size/3):(m+size/3);ctx.beginPath();ctx.moveTo(m,attackLineY);ctx.lineTo(m+size,attackLineY);ctx.stroke();
+  ctx.strokeStyle='#1f2933';ctx.lineWidth=7;ctx.beginPath();if(opp){ctx.moveTo(m,m+size);ctx.lineTo(m+size,m+size)}else{ctx.moveTo(m,m);ctx.lineTo(m+size,m)}ctx.stroke();
+}
+function toCanvas(p,c){const m=60,size=c.width-120;return{x:m+(p.x/9)*size,y:m+(p.y/9)*size}}
+function fromCanvas(e,c){const r=c.getBoundingClientRect(),m=60,size=c.width-120,px=(e.clientX-r.left)*c.width/r.width,py=(e.clientY-r.top)*c.height/r.height;return{x:+(((px-m)/size)*9).toFixed(2),y:+(((py-m)/size)*9).toFixed(2)}}
+function dot(ctx,c,p,label,color){if(!p)return;const q=toCanvas(p,c);ctx.fillStyle=color;ctx.beginPath();ctx.arc(q.x,q.y,11,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,q.x,q.y)}
+function line(ctx,c,a,b,color,dash=[]){if(!a||!b)return;const A=toCanvas(a,c),B=toCanvas(b,c);ctx.strokeStyle=color;ctx.lineWidth=3;ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.setLineDash([])}
+
+function draw(){
+  base(h,hc,false);base(o,oc,true);
+  const it=activeIdeal();if(it){const q=toCanvas(it,hc);h.strokeStyle='#b72222';h.lineWidth=3;h.beginPath();h.arc(q.x,q.y,12,0,Math.PI*2);h.stroke();h.beginPath();h.moveTo(q.x-17,q.y);h.lineTo(q.x+17,q.y);h.moveTo(q.x,q.y-17);h.lineTo(q.x,q.y+17);h.stroke()}
+  if(activeTab==='setup'){rotationOrder.forEach(r=>{const p=settings.setterStarts[r];if(p)dot(h,hc,p,r,'#76549b')});return}
+  dot(o,oc,points.serveOrigin,'S','#8b5e3c');
+  const untouchedAce=v('serveResult')==='Untouched ace';if(untouchedAce){dot(h,hc,points.serveLanding,'L','#1769aa');return}
+  dot(h,hc,points.passContact,'P','#174f5f');const ss=setterStart(),cross=(v('crossTouch')===''?3:+v('crossTouch'));
+  if(cross===3&&ss)dot(h,hc,ss,'SS','#76549b');
+  if(cross===3&&v('secondContact')==='Setter'){line(h,hc,ss,it,'#76549b');line(h,hc,it,points.setterContact,'#cb6b3d',[10,7])}
+  if(cross===3)dot(h,hc,points.setterContact,'2','#cb6b3d');
+  if(cross>=2)dot(h,hc,points.attackContact,'A','#b13f5d');
+  dot(o,oc,points.attackDestination,'T','#2f7d4a');
+}
+function metrics(){
+  const serviceError=v('serveResult')==='Opponent service error',untouchedAce=v('serveResult')==='Untouched ace',ace=v('passRating')==='0',it=activeIdeal();
+  const pd=dist(points.passContact,it),cross=(v('crossTouch')===''?3:+v('crossTouch')),setterUsed=cross===3&&v('secondContact')==='Setter';
+  const st=setterUsed?dist(setterStart(),it):null,sd=setterUsed?dist(it,points.setterContact):null,total=(st==null||sd==null)?null:st+sd;
+  const attackOrigin=cross===1?points.passContact:points.attackContact,al=attackDist(attackOrigin,points.attackDestination),setterNA=serviceError||untouchedAce||ace||!setterUsed;
+  $('passDeviation').textContent=(serviceError||untouchedAce)?'N/A':pd==null?'—':pd.toFixed(2)+' m';
+  $('setterToTarget').textContent=setterNA?'N/A':st==null?'—':st.toFixed(2)+' m';
+  $('setterDisplacement').textContent=setterNA?'N/A':sd==null?'—':sd.toFixed(2)+' m';
+  $('setterTravel').textContent=setterNA?'N/A':total==null?'—':total.toFixed(2)+' m';
+  $('attackLength').textContent=(serviceError||untouchedAce||ace)?'N/A':al==null?'—':al.toFixed(2)+' m';
+  $('rotationMetric').textContent=v('rotation');draw();
+}
+const homeModes=['serveLanding','passContact','setterContact','attackContact','idealTarget'],oppModes=['serveOrigin','attackDestination'];
+function courtClick(e,c,court){
+  const p=fromCanvas(e,c);
+  if(activeTab==='setup'){
+    if(court!=='home'){alert('Team Court Setup points are saved on My Team Court.');return}
+    if(mode==='idealTarget'){settings.idealTarget=p;localStorage.setItem('rallyflowPrototypeSettings',JSON.stringify(settings));$('status').textContent=`Ideal passing target saved at (${p.x}, ${p.y}).`;updateSetupSummary();metrics();return}
+    if(setupRotation){settings.setterStarts[setupRotation]=p;localStorage.setItem('rallyflowPrototypeSettings',JSON.stringify(settings));$('status').textContent=`Setter start for ${setupRotation} saved at (${p.x}, ${p.y}).`;updateSetupSummary();metrics();return}
+    return;
+  }
+  if(homeModes.includes(mode)&&court!=='home'){alert('Use My Team Court for that point.');return}
+  if(oppModes.includes(mode)&&court!=='opp'){alert('Use Opponent Court for that point.');return}
+  if(mode==='serveLanding'&&v('serveResult')!=='Untouched ace'){alert('Serve landing location is only recorded for untouched aces.');return}
+  points[mode]=p;metrics();
+}
+hc.onclick=e=>courtClick(e,hc,'home');oc.onclick=e=>courtClick(e,oc,'opp');
+
+function updateSetupSummary(){const t=settings.idealTarget,rows=rotationOrder.map(r=>{const p=settings.setterStarts[r];return `${r}: ${p?`(${p.x}, ${p.y})`:'Not set'}`}).join(' &nbsp; | &nbsp; ');$('setupSummary').innerHTML=`Ideal passing target: ${t?`(${t.x}, ${t.y})`:'Not set'}<br>${rows}`}
+function setTab(tab){
+  activeTab=tab;const plot=tab==='plot';$('plotRallyControls').style.display=plot?'block':'none';$('teamSetupControls').style.display=plot?'none':'block';
+  $('plotRallyTab').classList.toggle('active',plot);$('teamSetupTab').classList.toggle('active',!plot);
+  if(plot){setupRotation=null;mode=v('serveResult')==='Untouched ace'?'serveLanding':'serveOrigin';document.querySelectorAll('.rally-mode').forEach(x=>x.classList.toggle('active',x.dataset.mode===mode));document.querySelectorAll('.setup-mode').forEach(x=>x.classList.remove('active'))}
+  else{mode='idealTarget';setupRotation=null;document.querySelectorAll('.setup-mode').forEach(x=>x.classList.toggle('active',x.dataset.mode==='idealTarget'));document.querySelectorAll('.rally-mode').forEach(x=>x.classList.remove('active'));updateSetupSummary()}
+  metrics();
+}
+$('plotRallyTab').onclick=()=>setTab('plot');$('teamSetupTab').onclick=()=>setTab('setup');
+document.querySelectorAll('.rally-mode').forEach(b=>b.onclick=()=>{if(activeTab!=='plot')setTab('plot');document.querySelectorAll('.rally-mode').forEach(x=>x.classList.remove('active'));b.classList.add('active');mode=b.dataset.mode;if(mode==='setterContact'){if(!v('crossTouch'))$('crossTouch').value='3';if(!v('secondContact'))$('secondContact').value='Setter';applyCrossTouchLogic();}setupRotation=null;$('status').textContent='Current mode: '+b.textContent+'.'});
+document.querySelectorAll('.setup-mode').forEach(b=>b.onclick=()=>{if(activeTab!=='setup')setTab('setup');document.querySelectorAll('.setup-mode').forEach(x=>x.classList.remove('active'));b.classList.add('active');if(b.dataset.mode==='idealTarget'){mode='idealTarget';setupRotation=null}else{mode='setterStart';setupRotation=b.dataset.rotation}});
+
+const video=$('video');$('videoUpload').onchange=e=>{const f=e.target.files[0];if(f)video.src=URL.createObjectURL(f)};$('captureTime').onclick=()=>{const s=Math.floor(video.currentTime||0),m=Math.floor(s/60),sec=s%60;$('videoTime').value=String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0')};
+function nextRotation(r){return rotationOrder[(rotationOrder.indexOf(r)+1)%6]}
+function saveRotation(){localStorage.setItem('rallyflowPrototypeRotation',JSON.stringify(rotationState))}
+
+$('rotation').onchange=()=>{if(editingIndex===null){rotationState.currentRotation=v('rotation');saveRotation()}metrics()}
+
+function setFieldsDisabled(disabled){['serveType','passer','passRating','receiveTechnique','secondContact','systemStatus','setZone','attackRole','attackType','attackOutcome','blockers'].forEach(id=>$(id).disabled=disabled)}
+function applyCrossTouchLogic(){
+  const cross=v('crossTouch')===''?3:+v('crossTouch'),serviceError=v('serveResult')==='Opponent service error',untouchedAce=v('serveResult')==='Untouched ace',ace=v('passRating')==='0';if(serviceError||untouchedAce||ace)return;
+  ['secondContact','systemStatus','setZone'].forEach(id=>$(id).disabled=cross!==3);['attackRole','attackType','blockers'].forEach(id=>$(id).disabled=false);
+  $('setterContactMode').disabled=cross!==3;$('attackContactMode').disabled=cross===1;
+  if(cross===1){$('passRating').value='';$('passRating').disabled=true;$('attackType').value='First-touch return';$('crossTouchHint').textContent='First touch: Pass Rating is automatically N/A because the serve-receive contact itself sends the ball over. Setter fields are not used.'}
+  else if(cross===2){$('passRating').disabled=false;$('attackType').value='Second-touch attack';$('crossTouchHint').textContent='Second touch: Setter settings are disabled. Use Attack contact for the second-touch contact.'}
+  else{$('passRating').disabled=false;$('crossTouchHint').textContent='Third touch: record the normal pass → set → attack sequence.'}
+  metrics();
+}
+function outcomeLogic(){
+  const serviceError=v('serveResult')==='Opponent service error',untouchedAce=v('serveResult')==='Untouched ace',ace=v('passRating')==='0',outcome=v('attackOutcome'),resultBox=$('resultBox'),landing=$('untouchedAceLandingMode');
+  landing.disabled=!untouchedAce;$('sideOut').disabled=false;$('finalRallyResult').disabled=false;resultBox.classList.remove('auto');
+  if(serviceError){$('sideOut').value='N/A';$('finalRallyResult').value='Won';$('sideOut').disabled=true;$('finalRallyResult').disabled=true;setFieldsDisabled(true);$('crossTouch').disabled=true;$('resultHint').innerHTML='<b>Opponent service error:</b> no first-ball opportunity; receiving team wins the point.';resultBox.classList.add('auto')}
+  else if(untouchedAce){setFieldsDisabled(false);$('passRating').value='';$('sideOut').value='No';$('finalRallyResult').value='Lost';$('sideOut').disabled=true;$('finalRallyResult').disabled=true;['passer','passRating','receiveTechnique','secondContact','systemStatus','setZone','crossTouch','attackRole','attackType','attackOutcome','blockers'].forEach(id=>$(id).disabled=true);$('resultHint').innerHTML='<b>Untouched ace:</b> no pass is rated.';resultBox.classList.add('auto');mode='serveLanding';document.querySelectorAll('.rally-mode').forEach(x=>x.classList.toggle('active',x.dataset.mode==='serveLanding'))}
+  else{setFieldsDisabled(false);$('crossTouch').disabled=false;if(ace){$('sideOut').value='No';$('finalRallyResult').value='Lost';$('sideOut').disabled=true;$('finalRallyResult').disabled=true;['secondContact','systemStatus','setZone','attackRole','attackType','attackOutcome','blockers'].forEach(id=>$(id).disabled=true);resultBox.classList.add('auto')}
+    else if(outcome==='Kill'||outcome==='Tool kill'){$('sideOut').value='Yes';$('finalRallyResult').value='Won';$('sideOut').disabled=true;$('finalRallyResult').disabled=true;resultBox.classList.add('auto')}
+    else if(outcome==='Error'||outcome==='Blocked'){$('sideOut').value='No';$('finalRallyResult').value='Lost';$('sideOut').disabled=true;$('finalRallyResult').disabled=true;resultBox.classList.add('auto')}
+    else if(outcome==='Continued'){$('sideOut').value='No';$('sideOut').disabled=true;$('finalRallyResult').disabled=false}
+    applyCrossTouchLogic();
+  }
+  metrics();
+}
+function changedOutcome(){ $('sideOut').value='';$('finalRallyResult').value='';outcomeLogic();if(mode==='serveLanding'&&v('serveResult')!=='Untouched ace')setTab('plot');}
+$('serveResult').onchange=changedOutcome;$('passRating').onchange=changedOutcome;$('attackOutcome').onchange=changedOutcome;$('secondContact').onchange=metrics;$('crossTouch').onchange=applyCrossTouchLogic;
+
+function table(){
+  $('headers').innerHTML='<th class="rownum">#</th>'+headers.map(x=>`<th>${x}</th>`).join('')+'<th>Actions</th>';
+  $('rows').innerHTML=rallies.map((r,i)=>`<tr class="data-row ${editingIndex===i?'selected':''}" data-index="${i}"><td class="rownum">${i+1}</td>${headers.map(k=>`<td>${escapeHtml(r[k]??'')}</td>`).join('')}<td><div class="actions-cell"><button class="secondary mini edit-btn" data-index="${i}">Edit</button><button class="danger mini delete-btn" data-index="${i}">Delete</button></div></td></tr>`).join('');
+  $('rallyCount').textContent=rallies.length;
+  document.querySelectorAll('tr.data-row').forEach(tr=>tr.addEventListener('click',e=>{if(e.target.closest('button'))return;loadRally(+tr.dataset.index)}));
+  document.querySelectorAll('.edit-btn').forEach(b=>b.addEventListener('click',()=>loadRally(+b.dataset.index)));
+  document.querySelectorAll('.delete-btn').forEach(b=>b.addEventListener('click',()=>deleteRally(+b.dataset.index)));
+}
+function escapeHtml(x){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+function crossValue(s){if(String(s).startsWith('First'))return'1';if(String(s).startsWith('Second'))return'2';return'3'}
+function assign(id,val, fallback=''){const el=$(id);if(!el)return;const s=(val==null||val==='N/A')?fallback:String(val);if(el.tagName==='SELECT'){const exists=[...el.options].some(o=>o.value===s||o.text===s);if(exists)el.value=s}else el.value=s}
+function loadRally(i){
+  const r=rallies[i];if(!r)return;editingIndex=i;setTab('plot');
+  assign('matchName',r.match_name);assign('matchDate',r.match_date);assign('tournamentName',r.tournament_name);assign('setNumber',r.set_number,'1');assign('videoTime',r.video_timestamp);
+  assign('rotation',r.rotation,'R1');assign('startingRotation',r.starting_rotation,'R1');assign('serveResult',r.serve_result,'In play');assign('serveType',r.serve_type,'');assign('passer',r.main_passer,'');
+  assign('receiveTechnique',r.reception_technique,'');assign('passRating',r.pass_rating,'');assign('secondContact',r.second_contact_by,'');assign('systemStatus',r.system_status,'');assign('setZone',r.set_location,'');
+  assign('crossTouch',crossValue(r.ball_crossed_net_on),'3');assign('attackRole',r.attack_role,'');assign('attackType',r.attack_type,'');assign('attackOutcome',r.attack_outcome,'');assign('blockers',r.blockers_faced,'0');
+  assign('sideOut',r.successful_first_ball_sideout,'');assign('finalRallyResult',r.final_rally_result,'');assign('notes',r.notes,'');
+  points={serveOrigin:pt(r.serve_origin_x,r.serve_origin_y),serveLanding:pt(r.untouched_ace_landing_x,r.untouched_ace_landing_y),passContact:pt(r.pass_contact_x,r.pass_contact_y),setterContact:pt(r.setter_contact_x,r.setter_contact_y),attackContact:pt(r.attack_contact_x,r.attack_contact_y),attackDestination:pt(r.attack_destination_x,r.attack_destination_y)};
+  editIdealTarget=pt(r.ideal_target_x,r.ideal_target_y)||settings.idealTarget;editSetterStart=pt(r.setter_start_x,r.setter_start_y)||settings.setterStarts[r.rotation]||null;
+  $('editBanner').classList.add('show');$('editTitle').textContent=`Editing Rally #${i+1}`;$('editActions').classList.add('show');$('saveRally').style.display='none';
+  outcomeLogic();table();window.scrollTo({top:0,behavior:'smooth'});
+}
+function cancelEdit(){
+  editingIndex=null;editIdealTarget=null;editSetterStart=null;$('editBanner').classList.remove('show');$('editActions').classList.remove('show');$('saveRally').style.display='block';resetRally();table();metrics();
+}
+$('cancelEdit').onclick=cancelEdit;
+
+function buildRow(existing=null){
+  const serviceError=v('serveResult')==='Opponent service error',untouchedAce=v('serveResult')==='Untouched ace',ace=v('passRating')==='0',it=activeIdeal(),ss=setterStart(),pd=dist(points.passContact,it),cross=(v('crossTouch')===''?3:+v('crossTouch')),setterUsed=cross===3&&v('secondContact')==='Setter';
+  const st=setterUsed?dist(ss,it):null,sd=setterUsed?dist(it,points.setterContact):null,total=(st==null||sd==null)?null:st+sd,attackOrigin=cross===1?points.passContact:points.attackContact,al=attackDist(attackOrigin,points.attackDestination);
+  return {...(existing||{}),_rally_id:(existing&&existing._rally_id)||uid(),
+    match_name:v('matchName'),match_date:v('matchDate'),tournament_name:v('tournamentName'),set_number:v('setNumber'),video_timestamp:v('videoTime'),rotation:v('rotation'),
+    serve_result:v('serveResult'),serve_type:serviceError?'N/A':v('serveType'),serve_origin_x:serviceError?'':pv('serveOrigin','x'),serve_origin_y:serviceError?'':pv('serveOrigin','y'),
+    untouched_ace_landing_x:untouchedAce?pv('serveLanding','x'):'',untouched_ace_landing_y:untouchedAce?pv('serveLanding','y'):'',
+    main_passer:(serviceError||untouchedAce)?'N/A':v('passer'),reception_technique:(serviceError||untouchedAce)?'N/A':v('receiveTechnique'),pass_rating:(serviceError||untouchedAce||cross===1)?'N/A':v('passRating'),
+    pass_contact_x:(serviceError||untouchedAce)?'':pv('passContact','x'),pass_contact_y:(serviceError||untouchedAce)?'':pv('passContact','y'),ideal_target_x:it?it.x:'',ideal_target_y:it?it.y:'',pass_deviation_m:(serviceError||untouchedAce||pd==null)?'':pd.toFixed(2),
+    setter_start_x:(serviceError||untouchedAce||ace||!setterUsed||!ss)?'':ss.x,setter_start_y:(serviceError||untouchedAce||ace||!setterUsed||!ss)?'':ss.y,
+    setter_contact_x:(serviceError||untouchedAce||ace||cross!==3)?'':pv('setterContact','x'),setter_contact_y:(serviceError||untouchedAce||ace||cross!==3)?'':pv('setterContact','y'),
+    setter_start_to_target_m:(serviceError||untouchedAce||ace||st==null)?'':st.toFixed(2),setter_displacement_from_target_m:(serviceError||untouchedAce||ace||sd==null)?'':sd.toFixed(2),setter_total_travel_m:(serviceError||untouchedAce||ace||total==null)?'':total.toFixed(2),
+    second_contact_by:(serviceError||untouchedAce||ace||cross!==3)?'N/A':v('secondContact'),system_status:(serviceError||untouchedAce||ace||cross!==3)?'N/A':v('systemStatus'),set_location:(serviceError||untouchedAce||ace||cross!==3)?'N/A':v('setZone'),
+    ball_crossed_net_on:(serviceError||untouchedAce||ace)?'N/A':(cross===1?'First touch':cross===2?'Second touch':'Third touch'),
+    attack_role:(serviceError||untouchedAce||ace)?'N/A':v('attackRole'),attack_type:(serviceError||untouchedAce||ace)?'N/A':v('attackType'),
+    attack_contact_x:(serviceError||untouchedAce||ace)?'':(cross===1?pv('passContact','x'):pv('attackContact','x')),attack_contact_y:(serviceError||untouchedAce||ace)?'':(cross===1?pv('passContact','y'):pv('attackContact','y')),
+    attack_destination_x:(serviceError||untouchedAce||ace)?'':pv('attackDestination','x'),attack_destination_y:(serviceError||untouchedAce||ace)?'':pv('attackDestination','y'),attack_length_m:(serviceError||untouchedAce||ace||al==null)?'':al.toFixed(2),
+    blockers_faced:(serviceError||untouchedAce||ace)?'N/A':v('blockers'),attack_outcome:(serviceError||untouchedAce||ace)?'N/A':v('attackOutcome'),successful_first_ball_sideout:v('sideOut'),final_rally_result:v('finalRallyResult'),overall_sideout_won:v('finalRallyResult')==='Won'?'Yes':'No',notes:v('notes')
+  };
+}
+function validate(){
+  if(typeof session!=='undefined'&&session.server==='home'){if(!v('finalRallyResult')){alert('Select the final rally result.');return false}return true}
+  if(!v('serveResult')){alert('Select a serve result.');return false}
+  const serviceError=v('serveResult')==='Opponent service error',untouchedAce=v('serveResult')==='Untouched ace',ace=v('passRating')==='0';
+  if(!serviceError&&!untouchedAce&&!ace&&!v('crossTouch')){alert('Select which touch crossed the net.');return false}
+  if(!serviceError&&!untouchedAce&&!ace&&v('crossTouch')!=='1'&&!v('passRating')){alert('Select a pass rating.');return false}
+  if(!serviceError&&!untouchedAce&&!ace&&!v('attackOutcome')){alert('Select the first attack outcome.');return false}
+  if(!v('finalRallyResult')){alert('Select the final rally result.');return false}
+  return true;
+}
+function resetRally(){
+  $('serveResult').value='In play';$('passRating').value='';$('crossTouch').value='3';$('attackOutcome').value='';$('sideOut').value='';$('finalRallyResult').value='';$('notes').value='';$('videoTime').value='';$('secondContact').value='Setter';
+  points={serveOrigin:null,serveLanding:null,passContact:null,setterContact:null,attackContact:null,attackDestination:null};editIdealTarget=null;editSetterStart=null;outcomeLogic();
+}
+$('saveRally').onclick=()=>{
+  if(!validate())return;const row=buildRow();rallies.push(row);persist();table();
+  if($('autoRotation').checked){const current=v('rotation');if(v('finalRallyResult')==='Won'){const advanced=nextRotation(current);$('rotation').value=advanced;rotationState.currentRotation=advanced;$('rotationStatus').textContent=`Rally won: rotation advanced from ${current} to ${advanced}.`}else{rotationState.currentRotation=current;$('rotationStatus').textContent=`Rally lost: team remains in ${current}.`}rotationState.setNumber=v('setNumber');rotationState.startingRotation=v('startingRotation');saveRotation()}
+  resetRally();metrics();
+};
+$('updateRally').onclick=()=>{
+  if(editingIndex===null||!validate())return;const i=editingIndex;rallies[i]=buildRow(rallies[i]);persist();editingIndex=null;editIdealTarget=null;editSetterStart=null;$('editBanner').classList.remove('show');$('editActions').classList.remove('show');$('saveRally').style.display='block';table();resetRally();metrics();$('rotationStatus').textContent=`Rally #${i+1} updated. Rotation was not auto-advanced during editing.`;
+};
+function deleteRally(i){
+  const r=rallies[i];if(!r)return;if(!confirm(`Delete Rally #${i+1}? This permanently removes this saved row.`))return;
+  rallies.splice(i,1);persist();if(editingIndex===i)cancelEdit();else if(editingIndex!==null&&editingIndex>i)editingIndex--;table();metrics();
+}
+$('clearPoints').onclick=()=>{points={serveOrigin:null,serveLanding:null,passContact:null,setterContact:null,attackContact:null,attackDestination:null};metrics()}
+$('clearAll').onclick=()=>{if(!rallies.length){alert('No rallies to delete in this game.');return}if(confirm('Delete all '+rallies.length+' rallies in the currently selected game only? Other games and tournaments will be kept. This cannot be undone.')){rallies=[];cancelEdit();persist();table();}}
+
+function csvCell(x){return '"'+String(x??'').replaceAll('"','""')+'"'}
+$('exportCsv').onclick=()=>{
+  if(!rallies.length){alert('No saved rallies.');return}
+  const csv=[headers,...rallies.map(r=>headers.map(k=>r[k]??''))].map(row=>row.map(csvCell).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='rallyflow_dataset.csv';a.click();URL.revokeObjectURL(url);
+};
+function parseCSV(text){
+  const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i],n=text[i+1];if(q){if(ch==='"'&&n==='"'){cell+='"';i++}else if(ch==='"')q=false;else cell+=ch}else{if(ch==='"')q=true;else if(ch===','){row.push(cell);cell=''}else if(ch==='\n'){row.push(cell);rows.push(row);row=[];cell=''}else if(ch!=='\r')cell+=ch}}
+  row.push(cell);if(row.some(x=>x!==''))rows.push(row);return rows;
+}
+$('importCsv').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{
+    try{const rows=parseCSV(reader.result);if(rows.length<2)throw new Error('No rally rows found');const hs=rows[0].map(x=>x.trim());const imported=rows.slice(1).filter(r=>r.some(x=>x!=='')).map(vals=>{const obj={_rally_id:uid()};hs.forEach((k,j)=>obj[k]=vals[j]??'');return obj});
+      const replace=rallies.length?confirm(`Import ${imported.length} rallies and REPLACE the ${rallies.length} rallies currently saved?\n\nChoose Cancel if you do not want to replace them.`):true;if(!replace){e.target.value='';return}
+      rallies=imported;persist();cancelEdit();table();alert(`Imported ${rallies.length} rallies.`)
+    }catch(err){alert('Could not import CSV: '+err.message)}e.target.value='';
+  };reader.readAsText(f);
+};
+
+$('rotation').value=rotationState.currentRotation;$('startingRotation').value=rotationState.startingRotation;updateSetupSummary();setTab('plot');table();outcomeLogic();metrics();
+</script>
+<style>
+:root{--bg:#edf2f3;--accent:#126b70;--line:#d6e2e4} .wrap{max-width:1800px}.layout{grid-template-columns:minmax(0,1.8fr) minmax(340px,.8fr)}.layout>div:first-child>.card:first-child{position:relative;top:0;z-index:auto;box-shadow:0 8px 30px #18363816}video{max-height:620px;aspect-ratio:16/9;border-radius:12px}.video-shell{position:relative}.score-overlay{position:absolute;top:16px;left:16px;background:#102b32ed;color:white;padding:12px 16px;border-radius:10px;pointer-events:none;max-width:85%;font-size:15px}.score-overlay strong{font-size:24px;display:block}.score-overlay small{color:#c0e6df}.studio-bar{display:flex;justify-content:space-between;align-items:center;margin:12px 0;gap:10px}.studio-bar button{margin-left:8px}.controls{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0;align-items:center}.controls select{width:auto}.pill{display:inline-block;background:#e2f0ee;color:#125b59;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:bold}.notice{background:#fff3d9;padding:10px;border-radius:8px;font-size:13px;margin:8px 0}.overlay-inputs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}dialog{border:1px solid var(--line);border-radius:18px;max-width:820px;width:94%;max-height:90vh;padding:24px;color:var(--ink)}dialog::backdrop{background:#122c36a8}.dialog-head{display:flex;justify-content:space-between;align-items:center}.steps{display:flex;gap:8px;margin:14px 0}.steps button{background:#e9efef;padding:8px 12px;border-radius:8px}.steps .active{background:var(--accent);color:white}.setup-pane{display:none}.setup-pane.active{display:block}#setupCourt{max-width:350px;display:block;margin:12px auto}.help-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}details{padding:12px;border:1px solid var(--line);border-radius:9px;margin:8px 0}summary{font-weight:bold;cursor:pointer}.flow-example{display:flex;gap:7px;flex-wrap:wrap}.flow-example span{padding:10px;background:#e6f1ef;border-radius:7px}.review-wide .layout{grid-template-columns:1fr}.review-wide .layout>.card{display:none}.review-wide video{max-height:78vh}.review-wide .layout>div:first-child>.card:first-child{position:relative}.review-wide .layout>div:first-child>.card:nth-child(2){display:block}#studioMessage{font-size:13px;color:#126b70;min-height:20px}.setup-note{font-size:13px;color:var(--muted)}@media(max-width:1100px){.layout{grid-template-columns:1fr}.layout>div:first-child>.card:first-child{position:relative;top:0}.help-grid{grid-template-columns:1fr}}@media(max-width:600px){.overlay-inputs{grid-template-columns:1fr 1fr}.score-overlay strong{font-size:18px}.wrap{padding:10px}}
+#helpDialog{max-width:960px;line-height:1.5}#helpDialog h3{font-size:17px}#helpDialog p{font-size:14px}#helpDialog .help-court{width:100%;max-width:330px;display:block;margin:auto}.help-defs{font-size:14px}.help-defs dt{font-weight:bold;margin-top:12px}.help-defs dd{margin:3px 0 0}.help-steps{padding-left:22px;font-size:14px}.help-steps li{margin:10px 0}.help-table{overflow:auto}#helpDialog table{width:100%;min-width:520px;table-layout:auto}#helpDialog th,#helpDialog td{white-space:normal;font-size:13px;position:static;vertical-align:top;padding:9px}#helpDialog summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.point-check{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding:9px 0;font-size:13px}.point-check label{display:flex;gap:7px;align-items:center;margin:0;font-weight:normal}.point-check input{width:auto}#courtValidation{color:#a12f25;font-weight:bold}.insight-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}.insight-grid>div{min-width:0}.insight-table{overflow:auto}.insight-table table{width:100%;table-layout:auto}.insight-table th,.insight-table td{position:static;font-size:13px;white-space:normal}#dataOverview .metrics{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}@media(max-width:850px){.insight-grid{grid-template-columns:1fr}.point-check{align-items:flex-start;flex-direction:column}}
+ .point-check.missing-point{background:#fff0ed;border-left:4px solid #bd4a3b;padding-left:10px;border-radius:5px}.validation-error{border-color:#bd4a3b!important;background:#fff8f5!important}#courtValidation{margin-top:8px}
+</style>
+<div id="studioMount"></div>
+<script>
+// Studio prototype: direct film review and match context.
+const STUDIO_KEY='rallyflowStudioSessionV1';
+let session;try{session=JSON.parse(localStorage.getItem(STUDIO_KEY)||'null')}catch(e){};
+session=session||{home:'',away:'',server:'away',rotation:'R1',set:1,configured:false};
+let setupStep=0,setupPointMode='target',draftSetup=null,filmUrl=null;
+const fmt=t=>{t=Math.max(0,Math.floor(t||0));return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
+let studioSave=()=>localStorage.setItem(STUDIO_KEY,JSON.stringify(session));
+const esc=escapeHtml;
+const firstCard=$('video').closest('.card');
+const bar=document.createElement('div');bar.className='studio-bar';bar.innerHTML='<div><span class="pill">FILM REVIEW • DIRECT CODING</span></div><div><button id="openSetup" class="secondary">Game setup</button><button id="openHelp" class="secondary">Help & diagrams</button></div>';
+document.querySelector('.sub').textContent='Review your match film and code rallies directly as you watch.';document.querySelector('.sub').after(bar);
+const shell=document.createElement('div');shell.className='video-shell';video.before(shell);shell.append(video);
+firstCard.insertAdjacentHTML('beforeend',`<div class="controls"><button id="skipBack10">−10s</button><button id="skipBack5">−5s</button><button id="togglePlay" class="primary">Play / pause</button><button id="skipForward5">+5s</button><button id="skipForward10">+10s</button><label for="playSpeed">Speed</label><select id="playSpeed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select><button id="expandVideo">Expand review</button><button id="showPlotCourts" class="primary">Plot court points ↓</button></div>
+<div class="overlay-inputs"><div><label for="servingTeam">Serving team</label><select id="servingTeam"><option value="away">Opponent — we receive</option><option value="home">Our team — we serve</option></select></div><div><label for="overlayRotation">Our rotation</label><select id="overlayRotation">${rotationOrder.map(r=>'<option>'+r+'</option>').join('')}</select></div></div>
+<div id="studioMessage" role="status" aria-live="polite"></div><p class="hint">Shortcuts: Space play/pause · ←/→ 5s · Shift + ←/→ 10s. Shortcuts are off while typing.</p>`);
+$('studioMount').innerHTML=`<dialog id="setupDialog"><div class="dialog-head"><h2>Set up your game</h2><button id="closeSetup">Close</button></div><div class="steps"><button type="button" id="step0" class="secondary" aria-controls="setupPane0">1 · Game</button><button type="button" id="step1" class="secondary" aria-controls="setupPane1">2 · Court</button><button type="button" id="step2" class="secondary" aria-controls="setupPane2">3 · Start</button></div><div id="setupPane0" class="setup-pane" data-step="0"><p>Which team are you analyzing?</p><div class="row"><div class="field"><label>Our team</label><input id="setupHome" placeholder="Team name"></div><div class="field"><label>Opponent</label><input id="setupAway" placeholder="Opponent name"></div></div><div class="field"><label>Tournament</label><input id="setupMatch" readonly><p class="hint">Chosen above under Your tournaments.</p></div><div class="field"><label for="setupDate">Match date</label><input id="setupDate" type="date"></div><p class="setup-note">Video stays on your computer. Reloading requires selecting the same film again; your setup and saved data stay in this browser.</p></div><div id="setupPane1" class="setup-pane" data-step="1"><p>Click your ideal passing target, then mark the setter’s starting position for each rotation you will analyze.</p><div class="row"><div><label>Point to mark</label><select id="setupPoint"><option value="target">Ideal passing target</option>${rotationOrder.map(r=>'<option value="'+r+'">Setter start '+r+'</option>').join('')}</select></div><div><label>Rotation convention</label><p class="hint">R1: setter in zone 1; R2: zone 6; R3: zone 5; R4: zone 4; R5: zone 3; R6: zone 2. Advance R1 → R2 → … on a side-out.</p></div></div><canvas id="setupCourt" width="720" height="720"></canvas><div id="setupProgress" class="setup-note"></div><button type="button" id="skipCourtSetup" class="secondary">Skip court mapping for now</button><p class="hint">You can explore RallyFlow without mapping all six rotations. Unmarked positions remain unknown, not estimated, and can be added later through Game setup.</p><p class="hint">Court always shows our net at the top. Map film positions to this orientation even after teams change ends. Locations are estimates, not automatic measurements.</p></div><div id="setupPane2" class="setup-pane" data-step="2"><p>Where does your film begin? Choose the rotation and serving team <b>before</b> the first rally.</p><div class="row"><div><label>Set number</label><input id="setupSet" type="number" min="1"></div><div><label>Our rotation</label><select id="setupRotation"><option value="">Select…</option>${rotationOrder.map(r=>'<option>'+r+'</option>').join('')}</select></div></div><div class="field"><label>Who is serving?</label><select id="setupServer"><option value="">Select…</option><option value="home">Our team</option><option value="away">Opponent</option></select></div><p class="notice">Server and rotation update after each saved rally. If you skip rallies, select the correct server and rotation before continuing.</p></div><div id="setupError" role="status"></div><div class="controls"><button id="setupBack">Back</button><button id="setupNext" class="primary">Next</button></div></dialog>
+<dialog id="helpDialog" aria-labelledby="helpTitle"><div class="dialog-head"><h2 id="helpTitle">Help & volleyball guide</h2><button id="closeHelp">Close</button></div>
+<p>RallyFlow helps you record what happens after a volleyball serve and compare receiving rallies. You watch the film and mark the observations yourself.</p>
+<details open><summary>Start here: record a game</summary><ol class="help-steps">
+<li><b>Choose a tournament and game.</b> Choose or create a tournament under <b>Your tournaments</b>. Use <b>Add game</b>, then enter your team, opponent, and date. Use <b>Game in this tournament</b> to return to another game.</li>
+<li><b>Set up your court.</b> Mark the ideal passing target and the setter’s starting position for each rotation you plan to analyze. Unmarked positions stay unknown. Draft setup changes save as you work.</li>
+<li><b>Choose the starting context.</b> Select the set number, your rotation, and who is serving before the rally.</li>
+<li><b>Load your video.</b> Pause or slow it down. <b>Use Current Video Time</b> records a timestamp for the rally.</li>
+<li><b>Record the receiving rally.</b> Select Serve Result and Pass Rating. Choose a point type above the courts, then click its location. For normal offense, use third touch, record who made the second contact, and select the first attack outcome.</li>
+<li><b>Save.</b> Check the final rally result, then save. Server and rotation update for the next rally. You can click a saved row to edit it.</li></ol></details>
+<div class="help-grid"><section><h3>Court orientation & zones</h3>
+<svg viewBox="0 0 360 430" role="img" aria-labelledby="courtGuideTitle courtGuideDesc" class="help-court"><title id="courtGuideTitle">Court orientation and numbered zones</title><desc id="courtGuideDesc">Opponent court has its net at the bottom. Our court has its net at the top. On our side, front zones are four, three, two; back zones are five, six, one. The attack line is three meters from the net.</desc>
+<rect x="45" y="28" width="270" height="155" fill="#e7c98f" stroke="#fff" stroke-width="3"/><path d="M45 131H315" stroke="white" stroke-width="3"/><path d="M45 183H315" stroke="#18212a" stroke-width="6"/>
+<text x="180" y="19" text-anchor="middle" font-size="14">OPPONENT COURT</text><text x="180" y="84" text-anchor="middle" font-size="13">Serve origin (S) / destination (T)</text><text x="180" y="203" text-anchor="middle" font-size="13">NET — shared edge of both courts</text>
+<rect x="45" y="222" width="270" height="180" fill="#e7c98f" stroke="#fff" stroke-width="3"/><path d="M45 222H315" stroke="#18212a" stroke-width="6"/><path d="M45 282H315" stroke="white" stroke-width="3"/>
+<g fill="#18212a" text-anchor="middle" font-size="16"><text x="90" y="260">4</text><text x="180" y="260">3</text><text x="270" y="260">2</text><text x="90" y="353">5</text><text x="180" y="353">6</text><text x="270" y="353">1</text></g>
+<text x="54" y="300" font-size="11">3 m attack line</text><text x="180" y="423" text-anchor="middle" font-size="14">MY TEAM COURT</text></svg>
+<p class="hint">The app displays the two courts side by side. Always map your team with the net at the top, including after teams change ends. A zone number describes a court area; R1–R6 identifies a rotation.</p></section>
+<section><h3>What the court markers mean</h3><dl class="help-defs">
+<dt>S — Serve origin</dt><dd>Opponent’s location when serving. Mark it on Opponent Court.</dd>
+<dt>L — Untouched ace landing</dt><dd>Where an untouched serve lands on My Team Court. Enabled only for an untouched ace.</dd>
+<dt>P — Pass contact</dt><dd>Where your player first contacts the serve.</dd>
+<dt>Red crosshair — Ideal target</dt><dd>Where your team wants the setter to receive the pass.</dd>
+<dt>SS — Setter start</dt><dd>Setter’s location before the serve, saved separately for each rotation.</dd>
+<dt>C — Setter contact</dt><dd>Where the second contact happens in normal three-touch offense. Choose Setter contact, then click My Team Court. If the sequence fields are blank, this selects third-touch offense and Setter as the second-contact player; change that player if someone else set the ball.</dd>
+<dt>A — Attack contact</dt><dd>Where your team hits the ball over the net.</dd>
+<dt>T — Attack destination</dt><dd>Where the first attack goes on Opponent Court.</dd></dl>
+<p class="hint">Solid purple: setter start → ideal target. Dashed orange: ideal target → actual setter contact. These are reference segments, not tracked movement.</p></section></div>
+<details open><summary>First-ball side-out vs. final rally result</summary>
+<p><b>Side-out</b> means the receiving team wins the rally and gains the serve. <b>First-ball side-out</b> in RallyFlow means your team scores on its first return or attack after receiving, before the opponent keeps that ball in play.</p>
+<div class="help-table"><table><thead><tr><th>What happened?</th><th>First-ball side-out</th><th>Final result</th></tr></thead><tbody>
+<tr><td>Our first attack is a kill or tool kill.</td><td>Yes</td><td>We Won</td></tr>
+<tr><td>Our first attack is defended; we win later.</td><td>No</td><td>We Won</td></tr>
+<tr><td>Our first attack is defended; we lose later.</td><td>No</td><td>We Lost</td></tr>
+<tr><td>We are aced, make an attack error, or are blocked for a point.</td><td>No</td><td>We Lost</td></tr>
+<tr><td>Opponent makes a service error.</td><td>N/A — no first-ball opportunity</td><td>We Won</td></tr>
+<tr><td>Our team is serving.</td><td>N/A — serving point</td><td>Choose Won or Lost</td></tr></tbody></table></div>
+<p>Choose <b>Continued</b> when the opponent keeps our first attack in play, then watch through the end to select the final result. Use <b>Blocked</b> only when the block ends the rally; a block touch that stays playable is Continued.</p></details>
+<details><summary>Volleyball terms: the basics</summary><dl class="help-defs">
+<dt>Rally</dt><dd>One play, from the serve until the point ends.</dd>
+<dt>Match / set</dt><dd>A match is a game against an opponent made up of sets. Set number identifies which part of that match you are reviewing.</dd>
+<dt>Serve receive / pass</dt><dd>Receiving the opponent’s serve; the pass is the receiving contact that directs the ball toward a teammate.</dd>
+<dt>Setter / set</dt><dd>The setter usually makes the second contact, placing the ball for an attacker. Here, “set” means a contact, rather than a numbered part of a match.</dd>
+<dt>Attack / kill</dt><dd>An attack sends the ball toward the opponent to try to score. A kill is an attack that wins the point immediately.</dd>
+<dt>Ace / service error</dt><dd>An ace is a serve that immediately wins the point. An untouched ace reaches the floor without a receiver touching it; a touched ace contacts a receiver but cannot be kept in play. A service error loses the point for the serving team.</dd>
+<dt>Tool kill / attack error / block</dt><dd>A tool kill scores off the opponent’s block, typically out of bounds. An attack error loses the point, such as hitting out or into the net. A block intercepts an attack near the net.</dd>
+<dt>Rotation</dt><dd>The six-player order. A receiving team rotates one position clockwise when it wins the serve. Winning while serving does not cause a rotation.</dd>
+<dt>R1–R6 in this app</dt><dd>The setter’s rotational zone defines the label: R1 = zone 1, R2 = zone 6, R3 = zone 5, R4 = zone 4, R5 = zone 3, R6 = zone 2. This is RallyFlow’s convention; team labels can differ. Starting court points show actual locations before the serve, which may differ from zone centers.</dd>
+</dl><p class="hint">Indoor volleyball normally allows up to three team contacts to return the ball; a block contact does not count toward those three. General rules: <a href="https://www.fivb.com/volleyball/the-game/basic-rules/" target="_blank" rel="noopener noreferrer">FIVB basic rules</a>.</p></details>
+<details><summary>Pass ratings, player roles & offense terms</summary><p>Use consistent team definitions. These pass ratings are RallyFlow’s coding guide:</p><dl class="help-defs">
+<dt>0 — Touched ace / unplayable</dt><dd>The receiver touches the serve but the team cannot keep it in play. An untouched ace has no pass rating.</dd>
+<dt>1 — Poor</dt><dd>A pass that leaves very limited offensive options.</dd>
+<dt>2 — Playable</dt><dd>A pass that allows some attacking options.</dd>
+<dt>3 — Perfect</dt><dd>A pass that gives the setter the full planned offense.</dd>
+<dt>In-system / out-of-system / broken play</dt><dd>In-system: planned offense is available. Out-of-system: the team must use a more limited or improvised offense. Broken play: the normal sequence breaks down and the team scrambles to return the ball.</dd>
+<dt>OH / opposite / middle</dt><dd>Outside hitter (OH) usually attacks from the left; opposite usually attacks from the right; middle specializes in quick middle attacks and blocking. OH1 and OH2 identify your two outside hitters consistently.</dd>
+<dt>Libero / DS</dt><dd>A libero specializes in back-row defense and reception. DS means defensive specialist.</dd>
+<dt>Float / jump float / topspin serve</dt><dd>A float serve has little spin and can move unpredictably. A jump float adds a jump. Topspin makes the served ball dip; Standing float specifies a float serve without a jump.</dd>
+<dt>Platform / overhand reception</dt><dd>Platform: receive with joined forearms. Overhand: receive with hands above the head. Emergency one-arm is a one-arm attempt to keep the ball playable.</dd>
+<dt>Roll shot / tip / free ball / down ball</dt><dd>A roll shot is a controlled, softer attack; a tip gently places the ball; a free ball is an easier return used to keep play alive; a down ball is generally an attack without a jump.</dd>
+<dt>Setter dump / second-touch attack / first-touch return</dt><dd>A setter dump sends the second contact over to score. Second-touch attack includes any attack sent over on contact two. A first-touch return crosses immediately on the receiving contact; pass rating is N/A in this app.</dd>
+<dt>Set location / blockers faced</dt><dd>Set location describes where the attacker receives the set (for example, zone 4). Blockers faced counts opponents forming the block against that attack.</dd>
+</dl><p>Choose <b>Unknown</b> where offered if the film is unclear. Leave an optional field blank rather than inventing an observation.</p></details>
+<details><summary>What do the distance measurements mean?</summary><dl class="help-defs">
+<dt>Pass-to-target distance</dt><dd>Straight-line distance from the receiver’s contact location to the ideal target. It describes reception location, not where the pass landed or a pass-quality score.</dd>
+<dt>Setter start → target</dt><dd>Distance from the saved starting position to the ideal target.</dd>
+<dt>Target → setter contact</dt><dd>Distance between the ideal target and actual setter contact. Used to describe how far the setter contacts the ball from the target.</dd>
+<dt>Total setter path</dt><dd>Sum of the two reference segments above. This is an estimate, not the setter’s measured running distance.</dd>
+<dt>Attack length</dt><dd>Straight-line court distance from attack contact to destination, not the ball’s airborne trajectory.</dd></dl><p>Distances use manually marked court positions and are approximate. Required court points must be plotted or explicitly marked “Can’t determine from video” before saving. The completeness summary distinguishes complete court records from partial ones. Missing setup or contact points produce no measurement.</p></details>
+<details><summary>Review, exceptions & editing</summary>
+<p>Use playback speed and skip buttons to locate a play. Space plays/pauses; arrow keys skip 5 seconds, or 10 seconds with Shift. Shortcuts are off while typing or a dialog is open.</p>
+<p>For an <b>untouched ace</b>, choose that Serve Result and mark L on your court. For an <b>opponent service error</b>, no pass or attack is recorded. First- and second-touch returns do not use the normal setter-contact fields; use Pass contact for a first-touch return and Attack contact for a second-touch attack.</p>
+<p>During your serving runs, select Our team under Serving team, choose the final result, and save a quick serving point. It is excluded from first-ball side-out data. If you skip rallies, correct the serving team and rotation manually.</p>
+<p>Click a saved row to edit it; use Update Rally or Cancel Edit to return to the live match. Editing or deleting a historical rally does not rebuild later rotation or server context. Correct the current controls if needed. Switching matches clears the loaded video; reselect the appropriate film.</p></details>
+<details><summary>Multiple matches, tournaments & saving</summary>
+<p><b>New tournament</b> creates an event. <b>Add game</b> adds an opponent and date inside the selected tournament. Each game keeps its own film reference, rotation, and rallies. New games inherit that team’s court defaults within the tournament; you can adjust them for an individual game. <b>Use court setup as team default</b> updates the template for future games, without changing existing games. Choose a tournament first, then use <b>Game in this tournament</b> to switch games. To remove a game, select it, choose <b>Delete selected game</b>, and confirm. This deletes that game’s setup and rallies; other games stay saved. Delete tournament removes its games together after confirmation. Removing the last game also removes its empty tournament. Download a project backup first if you may need it again. Games in the same tournament share a tournament name; games against the same opponent can be distinguished by date. Set number stays within a match.</p>
+<p><b>Download project backup</b> saves every match, court setup, and setup draft to one JSON file. <b>Restore project</b> replaces the current project with that backup. Download a backup before moving computers, changing browsers, or opening a newly downloaded copy of the app.</p>
+<p><b>Export CSV</b> exports the selected match’s rallies. <b>Export all tournaments CSV</b> combines saved rallies from every match for analysis. <b>Export tournament CSV</b> combines rallies from games in the selected tournament. CSV is rally data, not a complete setup backup. Import CSV replaces rallies in the selected match only.</p>
+<p>Setup and saved rallies persist in this browser when storage is available. Private browsing, clearing site data, or opening a different local file can affect persistence. Video files and unsaved rally annotations are not stored; reselect film after reopening. There is no cloud account or automatic synchronization.</p></details>
+<details><summary>How do I read Tournament insights?</summary><p>Tournament insights summarizes saved receiving rallies, first-ball side-out rate, final receiving rally wins, average pass rating, and court completeness. Bar charts compare first-ball success by pass rating and rotation, and count attack outcomes. Every rate shows its denominator; no observations display as no data rather than zero success. The default view combines games in the selected tournament. Choose Selected game only to narrow it, or All tournaments to compare events. Filter Our team when different teams are included. Missing court points do not remove otherwise valid outcome data from the charts. Use View chart data for exact values.</p></details>
+<details><summary>What RallyFlow currently does</summary><p>Film review, point marking, and rally coding are manual. RallyFlow calculates reference distances and keeps saved rally records; it does not automatically identify players, analyze video, remove dead time, or track movement. Use Tournament insights for simple comparisons across games, or export CSV for further analysis.</p></details>
+</dialog>`;
+// Explicitly distinguish missing inputs from actual observations.
+const observedFields=['serveResult','serveType','passer','receiveTechnique','secondContact','systemStatus','attackRole','attackType','blockers','crossTouch'];
+observedFields.forEach(id=>{const el=$(id);el.insertAdjacentHTML('afterbegin','<option value="">Select…</option>');el.value=''});
+['serveType','passer','receiveTechnique','secondContact','systemStatus','attackRole','attackType'].forEach(id=>{if(![...$(id).options].some(o=>o.value==='Unknown'))$(id).insertAdjacentHTML('beforeend','<option>Unknown</option>')});
+$('autoRotation').checked=false;$('autoRotation').closest('.check').style.display='none';$('rotationStatus').textContent='Studio tracks rotation from serving team and final result.';
+// Readable labels and small contextual hints.
+$('setZone').placeholder='e.g. 4 = left front, 3 = middle, 2 = right front';
+const servingNotice=document.createElement('div');servingNotice.id='servingNotice';servingNotice.className='notice';servingNotice.textContent='Our team is serving: save the final result as a quick point. It will not enter the first-ball side-out analysis.';$('saveRally').before(servingNotice);
+function tell(s){$('studioMessage').textContent=s}
+function syncOverlay(){ $('servingTeam').value=session.server;$('overlayRotation').value=session.rotation;$('rotation').value=session.rotation;$('setNumber').value=session.set;renderOverlay(); }
+function renderOverlay(){const sr=session.server==='away';servingNotice.hidden=sr;document.querySelectorAll('.layout>.card .section').forEach((e,i)=>{if(i<3)e.style.display=sr?'':'none'});$('saveRally').textContent=sr?'Save receiving rally':'Save quick serving point';$('rotationMetric').textContent=session.rotation;if(!sr)$('finalRallyResult').disabled=false;}
+['servingTeam','overlayRotation'].forEach(id=>$(id).onchange=()=>{session.server=v('servingTeam');session.rotation=v('overlayRotation');studioSave();syncOverlay();metrics();tell('Match context corrected. This describes the rally before it is played.')});
+$('rotation').onchange=()=>{session.rotation=v('rotation');studioSave();syncOverlay();metrics()};$('setNumber').onchange=()=>{session.set=Math.max(1,parseInt(v('setNumber'))||1);studioSave();renderOverlay()};
+function seek(delta){if(!video.src){tell('Load your video first.');return}video.currentTime=Math.max(0,Math.min(Number.isFinite(video.duration)?video.duration:Infinity,video.currentTime+delta))}
+$('skipBack10').onclick=()=>seek(-10);$('skipBack5').onclick=()=>seek(-5);$('skipForward5').onclick=()=>seek(5);$('skipForward10').onclick=()=>seek(10);$('togglePlay').onclick=()=>{if(!video.src)return tell('Load your video first.');if(video.paused)video.play().catch(()=>tell('Choose a playable local video.'));else video.pause()};$('playSpeed').onchange=()=>video.playbackRate=Number(v('playSpeed'));
+$('showPlotCourts').onclick=()=>{document.body.classList.remove('review-wide');$('expandVideo').textContent='Expand review';$('homeCourt').closest('.card').scrollIntoView({behavior:'smooth',block:'start'})};
+$('expandVideo').onclick=()=>{document.body.classList.toggle('review-wide');$('expandVideo').textContent=document.body.classList.contains('review-wide')?'Return to coding':'Expand review'};
+$('videoUpload').onchange=e=>{const f=e.target.files[0];if(!f)return;if(filmUrl)URL.revokeObjectURL(filmUrl);filmUrl=URL.createObjectURL(f);video.src=filmUrl;session.film=f.name;studioSave();tell('Film loaded. Review it and code rallies directly as you watch.')};
+document.addEventListener('keydown',e=>{if(e.target.closest('input,select,textarea,button,summary,[contenteditable]')||$('setupDialog').open||$('helpDialog').open||$('tournamentDialog')?.open)return;if(e.code==='Space'){e.preventDefault();$('togglePlay').click()}if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();seek((e.key==='ArrowLeft'?-1:1)*(e.shiftKey?10:5))}});
+function showStep(){document.querySelectorAll('.setup-pane').forEach(e=>e.classList.toggle('active',+e.dataset.step===setupStep));for(let i=0;i<3;i++){$('step'+i).classList.toggle('active',i===setupStep);$('step'+i).setAttribute('aria-current',i===setupStep?'step':'false');}$('setupBack').disabled=setupStep===0;$('setupNext').textContent=setupStep===2?'Finish setup':'Next';$('setupError').textContent='';if(setupStep===1)drawSetup()}
+for(let i=0;i<3;i++)$('step'+i).onclick=()=>{setupStep=i;showStep()};
+function drawSetup(){const c=$('setupCourt'),ctx=c.getContext('2d');base(ctx,c);ctx.fillStyle='#18212a';ctx.font='bold 20px Arial';ctx.fillText('NET',320,42);dot(ctx,c,draftSetup.idealTarget,'T','#b72222');rotationOrder.forEach(r=>dot(ctx,c,draftSetup.setterStarts[r],r,'#76549b'));$('setupProgress').textContent='Target: '+(draftSetup.idealTarget?'set':'not set')+' · '+rotationOrder.map(r=>r+': '+(draftSetup.setterStarts[r]?'set':'not set')).join(' · ')}
+function openSetup(){draftSetup=JSON.parse(JSON.stringify(settings));setupPointMode='target';$('setupPoint').value='target';setupStep=0;$('setupHome').value=session.home;$('setupAway').value=session.away;$('setupMatch').value=currentTournament()?.name||session.tournament||v('tournamentName');$('setupDate').value=session.date||v('matchDate');$('setupSet').value=session.set;$('setupRotation').value=session.configured?session.rotation:'';$('setupServer').value=session.configured?session.server:'';if(setupDraft){for(const [id,value] of Object.entries(setupDraft.fields))$(id).value=value;draftSetup=JSON.parse(JSON.stringify(setupDraft.settings));}$('setupMatch').value=currentTournament()?.name||session.tournament||v('tournamentName');setupTeamForCourt=normalizedName(v('setupHome'));showStep();$('setupDialog').showModal()}
+$('openSetup').onclick=openSetup;$('closeSetup').onclick=()=>$('setupDialog').close();$('setupPoint').onchange=()=>setupPointMode=v('setupPoint');$('setupCourt').onclick=e=>{const p=fromCanvas(e,$('setupCourt'));if(p.x<0||p.x>9||p.y<0||p.y>9)return;if(setupPointMode==='target')draftSetup.idealTarget=p;else draftSetup.setterStarts[setupPointMode]=p;drawSetup();saveSetupDraft()};$('setupBack').onclick=()=>{setupStep--;showStep()};$('skipCourtSetup').onclick=()=>{setupStep=2;showStep();};
+$('setupNext').onclick=()=>{if(setupStep===0&&(!v('setupHome').trim()||!v('setupAway').trim())){$('setupError').textContent='Enter both team names.';return}if(setupStep<2){setupStep++;showStep();return}if(!v('setupHome').trim()||!v('setupAway').trim()){setupStep=0;showStep();$('setupError').textContent='Enter both team names before finishing setup.';return}if(!v('setupRotation')||!v('setupServer')){$('setupError').textContent='Choose your rotation and the serving team.';return}if(!v('setupSet')||!Number.isInteger(Number(v('setupSet')))||Number(v('setupSet'))<1){$('setupError').textContent='Use a whole set number of at least 1.';return}settings=draftSetup;localStorage.setItem('rallyflowPrototypeSettings',JSON.stringify(settings));Object.assign(session,{home:v('setupHome').trim(),away:v('setupAway').trim(),set:Number(v('setupSet')),rotation:v('setupRotation'),server:v('setupServer'),configured:true});session.tournament=v('setupMatch').trim();session.date=v('setupDate');$('matchDate').value=session.date;setupDraft=null;$('tournamentName').value=session.tournament;$('matchName').value=session.home+' vs '+session.away;studioSave();syncOverlay();updateSetupSummary();metrics();$('setupDialog').close();tell('Setup saved. Load film and begin coding. Unmarked setter starts remain unknown.')};
+$('openHelp').onclick=()=>$('helpDialog').showModal();$('closeHelp').onclick=()=>$('helpDialog').close();
+// Allow unknown court setup without silently inserting sample positions.
+updateSetupSummary=function(){const t=settings.idealTarget;$('setupSummary').textContent='Ideal target: '+(t?`(${t.x}, ${t.y})`:'Not set')+' | '+rotationOrder.map(r=>r+': '+(settings.setterStarts[r]?'set':'Not set')).join(' | ')};
+const oldReset=resetRally;resetRally=function(){oldReset();observedFields.forEach(id=>$(id).value='');outcomeLogic();$('sideOut').value='';$('finalRallyResult').disabled=false;renderOverlay()};
+const oldBuild=buildRow;buildRow=function(existing){const row=oldBuild(existing);if(session.server==='home'){const keep=['match_name','match_date','tournament_name','set_number','video_timestamp','rotation','final_rally_result','notes'];headers.forEach(k=>{if(!keep.includes(k))row[k]='N/A'});}return {...row,serving_team:session.server==='home'?'Our team':'Opponent',record_type:session.server==='home'?'Serving point':'Receiving rally',film_name:session.film||''}};
+headers.push('record_type','serving_team','film_name');
+function saveStudio(){if(!session.configured)return openSetup();if(session.server==='away'){if(!v('serveResult'))return tell('Select a serve result.');if(!['Untouched ace','Opponent service error'].includes(v('serveResult'))&&!v('passRating')&&v('crossTouch')!=='1')return tell('Select a pass rating, or first-touch return.');if(!validate())return}else if(!v('finalRallyResult'))return tell('Select the final result for this serving point.');
+let row=buildRow();if(session.server==='home'){const keep=['match_name','match_date','tournament_name','set_number','video_timestamp','rotation','starting_rotation','final_rally_result','notes','record_type','serving_team','film_name','_rally_id'];headers.forEach(k=>{if(!keep.includes(k))row[k]='N/A'});row.overall_sideout_won='N/A';row.successful_first_ball_sideout='N/A'}rallies.push(row);persist();if(row.final_rally_result==='Won'){if(session.server==='away')session.rotation=nextRotation(session.rotation);session.server='home'}else{session.server='away'}studioSave();resetRally();syncOverlay();metrics();table();tell('Saved. Server and rotation now describe the NEXT rally. Continue reviewing your film.');}
+$('saveRally').onclick=saveStudio;
+let liveContext=null;const originalLoad=loadRally;loadRally=function(i){if(editingIndex===null)liveContext={server:session.server,rotation:session.rotation,set:session.set};originalLoad(i);const r=rallies[i];session.set=Number(r.set_number)||1;if(r.record_type==='Serving point'){session.server='home'}else session.server='away';session.rotation=r.rotation||session.rotation;syncOverlay();if(video.src&&r.video_timestamp){const parts=String(r.video_timestamp).split(':').map(Number);if(parts.every(Number.isFinite))video.currentTime=parts.reduce((total,n)=>total*60+n,0);}tell('Editing historical context. Current match context returns when you finish or cancel; later records are not recalculated.')};
+const studioUpdate=$('updateRally').onclick;const studioCancel=cancelEdit;function restoreLiveContext(){if(liveContext){Object.assign(session,liveContext);liveContext=null;studioSave();syncOverlay();metrics();tell('Returned to current match context.')}}$('updateRally').onclick=()=>{studioUpdate();if(editingIndex===null)restoreLiveContext()};cancelEdit=function(){studioCancel();restoreLiveContext()};$('cancelEdit').onclick=cancelEdit;
+
+// Each match owns its setup, current context, and rally data.
+const WORKSPACE_KEY='rallyflowWorkspaceV2';
+const clone=x=>JSON.parse(JSON.stringify(x));
+let workspace,setupDraft=null;
+try{workspace=JSON.parse(localStorage.getItem(WORKSPACE_KEY)||'null')}catch(e){}
+if(!workspace||!Array.isArray(workspace.matches)||!workspace.matches.length){
+  if(!session.configured&&!localStorage.getItem(STUDIO_KEY)){settings={idealTarget:null,setterStarts:{}}}
+  workspace={version:2,activeId:uid(),matches:[]};
+  workspace.matches.push({id:workspace.activeId,session:clone(session),settings:clone(settings),rallies:clone(rallies),draft:null});
+}
+function saveWorkspace(){
+  const current=workspace.matches.find(m=>m.id===workspace.activeId);
+  if(!current)return;
+  // Historical editing must not overwrite the live rotation/server on disk.
+  current.session=clone({...session,...(liveContext||{})});current.settings=clone(settings);current.rallies=clone(rallies);current.draft=clone(setupDraft);
+  ensureTournaments();session.tournament=current.session.tournament;
+  try{localStorage.setItem(WORKSPACE_KEY,JSON.stringify(workspace));$('storageStatus').textContent='Saved in this browser. Download a project backup to keep all matches and court setups.'}
+  catch(e){$('storageStatus').textContent='Browser saving failed. Download a project backup now to keep your work.'}
+  renderMatchList();
+}
+const matchTools=document.createElement('div');matchTools.className='card';matchTools.innerHTML=`<h2>Your tournaments</h2><div class="row"><div><label for="savedTournament">Tournament</label><select id="savedTournament"></select></div><div><label for="savedMatch">Game in this tournament</label><select id="savedMatch"></select></div></div><div class="controls"><button id="newTournament" class="primary">New tournament</button><button id="renameTournament" class="secondary">Rename tournament</button><button id="newMatch" class="primary">Add game</button><button id="deleteMatch" class="danger">Delete selected game</button><button id="deleteTournament" class="danger">Delete tournament</button></div><div class="controls"><button id="saveCourtDefault" class="secondary">Use court setup as team default</button><button id="exportTournament" class="secondary">Export tournament CSV</button><button id="backupProject" class="secondary">Download project backup</button><label class="import-label">Restore project<input id="restoreProject" type="file" accept=".json,application/json"></label><button id="exportAllCsv" class="secondary">Export all tournaments CSV</button></div><p id="tournamentSummary" class="hint"></p><p id="storageStatus" class="hint" role="status"></p>`;bar.after(matchTools);
+const tournamentDialog=document.createElement('dialog');tournamentDialog.id='tournamentDialog';tournamentDialog.setAttribute('aria-labelledby','tournamentTitle');tournamentDialog.innerHTML='<div class="dialog-head"><h2 id="tournamentTitle">New tournament</h2><button id="closeTournament">Close</button></div><div class="field"><label for="tournamentTitleInput">Tournament name</label><input id="tournamentTitleInput" placeholder="e.g. Pacific Northwest Qualifier 2026"></div><div class="field" id="tournamentTeamField"><label for="tournamentTeamInput">Our team</label><input id="tournamentTeamInput" placeholder="Team name"></div><p class="hint">Games stay separate within the tournament. Court defaults are shared for the same team; each game can have its own adjustments.</p><p id="tournamentError" role="status"></p><button id="saveTournament" class="primary">Create tournament</button>';document.body.append(tournamentDialog);
+let tournamentDialogMode='new',setupTeamForCourt='';
+function normalizedName(name){return String(name||'').trim().toLocaleLowerCase()}
+function ensureTournaments(){
+ if(!Array.isArray(workspace.tournaments))workspace.tournaments=[];
+ for(const m of workspace.matches){
+  const name=String(m.session.tournament||m.draft?.fields?.setupMatch||'Untitled tournament').trim()||'Untitled tournament';
+  let t=workspace.tournaments.find(t=>t.id===m.tournamentId&&normalizedName(t.name)===normalizedName(name));
+  if(!t)t=workspace.tournaments.find(t=>normalizedName(t.name)===normalizedName(name));
+  if(!t){t={id:uid(),name,defaults:{}};workspace.tournaments.push(t)}
+  if(!t.defaults||typeof t.defaults!=='object')t.defaults={};
+  m.tournamentId=t.id;m.session.tournament=t.name;
+  // Use the first completed game as the initial default; never overwrite an existing game.
+  const team=normalizedName(m.session.home);
+  if(team&&m.session.configured&&!t.defaults[team])t.defaults[team]=clone(m.settings);
+ }
+ workspace.tournaments=workspace.tournaments.filter(t=>workspace.matches.some(m=>m.tournamentId===t.id));
+}
+function currentTournament(){const m=workspace.matches.find(m=>m.id===workspace.activeId);return workspace.tournaments.find(t=>t.id===m?.tournamentId)}
+function renderMatchList(){
+ ensureTournaments();const t=currentTournament();if(!t)return;
+ $('savedTournament').innerHTML=workspace.tournaments.map(item=>`<option value="${esc(item.id)}">${esc(item.name)} (${workspace.matches.filter(m=>m.tournamentId===item.id).length} games)</option>`).join('');$('savedTournament').value=t.id;
+ const games=workspace.matches.filter(m=>m.tournamentId===t.id);
+ $('savedMatch').innerHTML=games.map(m=>{const c=m.session,d=m.draft?.fields;return `<option value="${esc(m.id)}">${esc([(c.home||d?.setupHome||'My team')+' vs '+(c.away||d?.setupAway||'New opponent'),c.date||d?.setupDate].filter(Boolean).join(' · '))} (${m.rallies.length} rallies)</option>`}).join('');$('savedMatch').value=workspace.activeId;
+ $('tournamentSummary').textContent=t.name+' · '+games.length+' games · '+games.reduce((n,m)=>n+m.rallies.length,0)+' saved rallies. Court defaults are shared by team within this tournament; existing games keep their own positions.';
+}
+function activateMatch(id){
+  const m=workspace.matches.find(m=>m.id===id);if(!m)return;
+  workspace.activeId=id;session=clone(m.session);settings=clone(m.settings);rallies=clone(m.rallies);setupDraft=clone(m.draft||null);editingIndex=null;liveContext=null;
+  $('editBanner').classList.remove('show');$('editActions').classList.remove('show');$('saveRally').style.display='block';
+  video.pause();video.removeAttribute('src');video.load();$('videoUpload').value='';if(filmUrl){URL.revokeObjectURL(filmUrl);filmUrl=null;}
+  $('matchName').value=session.home&&session.away?session.home+' vs '+session.away:'';$('matchDate').value=session.date||'';$('tournamentName').value=session.tournament||'';
+  // Keep legacy keys compatible with the original annotation controls.
+  localStorage.setItem('rallyflowPrototypeSettings',JSON.stringify(settings));localStorage.setItem('rallyflowPrototypeRallies',JSON.stringify(rallies));
+  syncOverlay();resetRally();updateSetupSummary();metrics();table();renderMatchList();saveWorkspace();
+  tell(session.film?'Match restored. Re-select '+session.film+' to review its film.':'Match restored. Load film when ready.');
+}
+persist=function(){localStorage.setItem('rallyflowPrototypeRallies',JSON.stringify(rallies));saveWorkspace()};
+studioSave=function(){localStorage.setItem(STUDIO_KEY,JSON.stringify({...session,...(liveContext||{})}));saveWorkspace()};
+function saveSetupDraft(){setupDraft={settings:clone(draftSetup),fields:Object.fromEntries(['setupHome','setupAway','setupMatch','setupDate','setupSet','setupRotation','setupServer'].map(id=>[id,v(id)]))};saveWorkspace()}
+$('setupHome').addEventListener('change',()=>{const team=normalizedName(v('setupHome'));if(team!==setupTeamForCourt){const template=currentTournament()?.defaults?.[team];if(!session.configured){draftSetup=template?clone(template):{idealTarget:null,setterStarts:{}};if(setupStep===1)drawSetup()}setupTeamForCourt=team;}});
+$('setupDialog').addEventListener('input',saveSetupDraft);$('setupDialog').addEventListener('change',saveSetupDraft);
+// Save direct court edits as well as changes made in the setup wizard.
+for(const id of ['homeCourt','oppCourt'])$(id).addEventListener('click',()=>{if(activeTab==='setup')saveWorkspace()});
+$('savedMatch').onchange=()=>{const id=v('savedMatch');if((editingIndex!==null||Object.values(points).some(Boolean)||v('notes')||v('attackOutcome')||v('serveResult'))&&!confirm('Switch matches and discard the unsaved rally?')){renderMatchList();return}if(editingIndex!==null)cancelEdit();saveWorkspace();activateMatch(id)};
+$('newMatch').onclick=()=>{if((editingIndex!==null||Object.values(points).some(Boolean)||v('notes')||v('serveResult'))&&!confirm('Create a match and discard the unsaved rally?'))return;if(editingIndex!==null)cancelEdit();saveWorkspace();const t=currentTournament();createGame(t,session.home||'');openSetup()};
+$('deleteMatch').onclick=()=>{
+ const index=workspace.matches.findIndex(m=>m.id===workspace.activeId);if(index<0)return;
+ const match=workspace.matches[index],draft=match.draft?.fields;
+ const name=[(match.session.home||draft?.setupHome||'My team')+' vs '+(match.session.away||draft?.setupAway||'Opponent'),match.session.tournament||draft?.setupMatch,match.session.date||draft?.setupDate].filter(Boolean).join(' · ');
+ if(!confirm('Delete '+name+'?\n\nThis removes its setup and '+rallies.length+' saved rallies, plus any unsaved rally. If this is the last game in its tournament, the empty tournament is removed too. Other games will be kept. Download a project backup first if you may need this match again.'))return;
+ workspace.matches.splice(index,1);editingIndex=null;liveContext=null;
+ if(!workspace.matches.length){const id=uid();workspace.matches.push({id,session:{home:'',away:'',date:'',tournament:'',server:'away',rotation:'R1',set:1,configured:false},settings:{idealTarget:null,setterStarts:{}},rallies:[],draft:null})}
+ activateMatch(workspace.matches[Math.min(index,workspace.matches.length-1)].id);
+ tell('Deleted '+name+'. Other saved matches were kept.');
+ if(!session.configured)openSetup();
+};
+function downloadText(name,text,type){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+$('backupProject').onclick=()=>{saveWorkspace();downloadText('RallyFlow-project.json',JSON.stringify(workspace,null,2),'application/json')};
+function validProject(p){return p&&p.version===2&&Array.isArray(p.matches)&&p.matches.length>0&&new Set(p.matches.map(m=>m.id)).size===p.matches.length&&p.matches.every(m=>typeof m.id==='string'&&m.session&&typeof m.session.home==='string'&&typeof m.session.away==='string'&&rotationOrder.includes(m.session.rotation)&&['home','away'].includes(m.session.server)&&m.settings&&m.settings.setterStarts&&Array.isArray(m.rallies)&&m.rallies.every(r=>r&&typeof r==='object')&&(!m.draft||(m.draft.fields&&m.draft.settings&&m.draft.settings.setterStarts)))}
+$('restoreProject').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!validProject(data))throw Error('Choose a RallyFlow project backup.');if(!confirm('Replace all current matches with this project backup? Download a backup first if you want to keep the current project.'))return;workspace=data;ensureTournaments();activateMatch(data.matches.some(m=>m.id===data.activeId)?data.activeId:data.matches[0].id);if(!session.configured)openSetup();tell('Project restored, including all matches and court setups.')}catch(err){tell('Could not restore project: '+err.message)}finally{e.target.value=''}};
+$('exportAllCsv').onclick=()=>{saveWorkspace();const rows=workspace.matches.flatMap(m=>m.rallies);if(!rows.length)return tell('No saved rallies to export.');downloadText('RallyFlow-all-matches.csv',[headers,...rows.map(r=>headers.map(k=>r[k]??''))].map(row=>row.map(csvCell).join(',')).join('\n'),'text/csv')};
+for(const id of ['matchDate','tournamentName'])$(id).addEventListener('change',()=>{session[id==='matchDate'?'date':'tournament']=v(id);studioSave()});
+$('tournamentName').readOnly=true;$('tournamentName').title='Use Rename tournament above to change this name.';$('matchName').readOnly=true;$('matchName').title='Change team names in Game setup.';
+window.addEventListener('pagehide',()=>{if($('setupDialog').open)saveSetupDraft();saveWorkspace()});
+function discardCurrentRally(action){if((editingIndex!==null||Object.values(points).some(Boolean)||v('notes')||v('serveResult'))&&!confirm(action+' and discard the unsaved rally?'))return false;if(editingIndex!==null)cancelEdit();saveWorkspace();return true}
+function createGame(t,home){const id=uid(),template=t.defaults?.[normalizedName(home)];workspace.matches.push({id,tournamentId:t.id,session:{home,away:'',date:'',tournament:t.name,server:'away',rotation:'R1',set:1,configured:false},settings:template?clone(template):{idealTarget:null,setterStarts:{}},rallies:[],draft:null});activateMatch(id)}
+$('savedTournament').onchange=()=>{const target=v('savedTournament');if(!discardCurrentRally('Switch tournaments'))return renderMatchList();const game=workspace.matches.find(m=>m.tournamentId===target);if(game){$('insightScope').value='tournament';activateMatch(game.id);if(!session.configured)openSetup()}};
+$('newTournament').onclick=()=>{tournamentDialogMode='new';$('tournamentTitle').textContent='New tournament';$('saveTournament').textContent='Create tournament';$('tournamentTitleInput').value='';$('tournamentTeamInput').value=session.home||'';$('tournamentTeamField').hidden=false;$('tournamentError').textContent='';tournamentDialog.showModal()};
+$('renameTournament').onclick=()=>{tournamentDialogMode='rename';$('tournamentTitle').textContent='Rename tournament';$('saveTournament').textContent='Save name';$('tournamentTitleInput').value=currentTournament().name;$('tournamentTeamField').hidden=true;$('tournamentError').textContent='';tournamentDialog.showModal()};$('closeTournament').onclick=()=>tournamentDialog.close();
+$('saveTournament').onclick=()=>{
+ const name=v('tournamentTitleInput').trim(),home=v('tournamentTeamInput').trim();if(!name||tournamentDialogMode==='new'&&!home){$('tournamentError').textContent='Enter a tournament name'+(tournamentDialogMode==='new'?' and your team name.':'.');return}
+ const existing=workspace.tournaments.find(t=>normalizedName(t.name)===normalizedName(name));
+ if(existing&&(tournamentDialogMode==='new'||existing.id!==currentTournament().id)){$('tournamentError').textContent='That tournament already exists. Choose it from Your tournaments and add a game.';return}
+ if(tournamentDialogMode==='rename'){
+  const t=currentTournament();t.name=name;for(const m of workspace.matches.filter(m=>m.tournamentId===t.id)){m.session.tournament=name;if(m.draft)m.draft.fields.setupMatch=name;for(const row of m.rallies)row.tournament_name=name}session.tournament=name;if(setupDraft)setupDraft.fields.setupMatch=name;for(const row of rallies)row.tournament_name=name;$('tournamentName').value=name;$('setupMatch').value=name;studioSave();renderDashboard();
+ }else{
+  if(!discardCurrentRally('Create a tournament'))return;
+  if(workspace.matches.length===1&&!session.configured&&!rallies.length&&!session.home&&!setupDraft&&currentTournament()?.name==='Untitled tournament'){workspace.matches=[];workspace.tournaments=[];}const t={id:uid(),name,defaults:{}};workspace.tournaments.push(t);$('insightScope').value='tournament';createGame(t,home);openSetup();
+ }
+ tournamentDialog.close();
+};
+$('saveCourtDefault').onclick=()=>{const t=currentTournament(),team=normalizedName(session.home);if(!team)return tell('Enter your team name in Game setup first.');t.defaults[team]=clone(settings);saveWorkspace();tell('Court setup saved as the default for '+session.home+' in '+t.name+'. New games for this team inherit it; existing games keep their own setup.')};
+$('exportTournament').onclick=()=>{saveWorkspace();const t=currentTournament(),rows=workspace.matches.filter(m=>m.tournamentId===t.id).flatMap(m=>m.rallies);if(!rows.length)return tell('No saved rallies in this tournament.');downloadText('RallyFlow-tournament.csv',[headers,...rows.map(r=>headers.map(k=>r[k]??''))].map(row=>row.map(csvCell).join(',')).join('\n'),'text/csv')};
+$('deleteTournament').onclick=()=>{const t=currentTournament(),games=workspace.matches.filter(m=>m.tournamentId===t.id),count=games.reduce((n,m)=>n+m.rallies.length,0);if(!confirm('Delete '+t.name+' and all '+games.length+' games ('+count+' saved rallies)? This also discards the unsaved rally. Other tournaments will be kept. Download a project backup first if needed.'))return;workspace.matches=workspace.matches.filter(m=>m.tournamentId!==t.id);workspace.tournaments=workspace.tournaments.filter(item=>item.id!==t.id);editingIndex=null;liveContext=null;
+ if(!workspace.matches.length){const fresh={id:uid(),name:'Untitled tournament',defaults:{}};workspace.tournaments.push(fresh);createGame(fresh,'');openSetup()}else{activateMatch(workspace.matches[0].id);if(!session.configured)openSetup()}
+ tell('Tournament deleted.');};
+// Guided court completeness and an overview of saved observations.
+let pointUnknowns={};
+const pointNames={passContact:'Pass contact',setterContact:'Second contact (setter or other player)',attackContact:'Attack contact',attackDestination:'Attack destination',serveLanding:'Untouched ace landing'};
+function requiredPointsFor(r){
+  if(r.record_type==='Serving point'||r.serving_team==='Our team'||r.serve_result==='Opponent service error')return [];
+  if(r.serve_result==='Untouched ace')return ['serveLanding'];
+  const keys=['passContact'];if(String(r.pass_rating)==='0')return keys;
+  const cross=r.ball_crossed_net_on;
+  if(cross==='Third touch')keys.push('setterContact');
+  if(cross!=='First touch')keys.push('attackContact');
+  keys.push('attackDestination');return keys;
+}
+const pointColumns={passContact:['pass_contact_x','pass_contact_y'],setterContact:['setter_contact_x','setter_contact_y'],attackContact:['attack_contact_x','attack_contact_y'],attackDestination:['attack_destination_x','attack_destination_y'],serveLanding:['untouched_ace_landing_x','untouched_ace_landing_y']};
+function hasCoordinates(r,key){const cols=pointColumns[key];return cols.every(k=>r[k]!==''&&r[k]!=null&&Number.isFinite(Number(r[k])))}
+function liveRequirements(){return requiredPointsFor({record_type:session.server==='home'?'Serving point':'Receiving rally',serve_result:v('serveResult'),pass_rating:v('passRating'),ball_crossed_net_on:v('crossTouch')==='1'?'First touch':v('crossTouch')==='2'?'Second touch':'Third touch'})}
+const outcomeGuide=document.createElement('p');outcomeGuide.className='hint';outcomeGuide.id='outcomeGuide';outcomeGuide.innerHTML='<b>How results work:</b> First-ball side-out means the receiving team scores immediately on its first attack. Final rally result means who wins the entire point. A kill automatically wins both; if the ball stays in play (Continued), watch the rest of the rally and select the final winner.';
+$('resultHint').after(outcomeGuide);
+const courtChecklist=document.createElement('div');courtChecklist.id='courtChecklist';courtChecklist.className='resultbox';$('saveRally').before(courtChecklist);
+function updateCourtChecklist(){
+  courtChecklist.hidden=session.server==='home';
+  if(!v('serveResult')&&session.server!=='home'){courtChecklist.innerHTML='<b>Court points</b><p class="hint">Choose Serve Result to see which points this rally needs. Serve origin is optional.</p>';return}
+  const required=liveRequirements();courtChecklist.hidden=session.server==='home';
+  courtChecklist.innerHTML='<b>Required court points</b><p class="hint">Plot each point, or explicitly mark it unavailable if the footage does not show it. Unavailable points stay missing and cannot contribute to distance measurements. Serve origin is optional.</p>'+required.map(key=>`<div class="point-check"><span>${points[key]?'✓ Plotted':pointUnknowns[key]?'— Unavailable':'○ Needed'}: ${pointNames[key]}</span><label><input type="checkbox" data-unknown-point="${key}" ${pointUnknowns[key]?'checked':''}> Can’t determine from video</label></div>`).join('')+(!required.length?'<p class="hint">No court points needed for an opponent service error.</p>':'')+'<div id="courtValidation" role="status" aria-live="polite"></div>';
+  courtChecklist.classList.remove('validation-error');courtChecklist.querySelectorAll('[data-unknown-point]').forEach(el=>el.onchange=()=>{pointUnknowns[el.dataset.unknownPoint]=el.checked;if(el.checked)points[el.dataset.unknownPoint]=null;metrics()});
+}
+const coreMetrics=metrics;metrics=function(){coreMetrics();updateCourtChecklist()};
+const coreCourtClick=courtClick;courtClick=function(e,c,court){const before=points[mode];coreCourtClick(e,c,court);if(activeTab==='plot'&&points[mode]&&points[mode]!==before){delete pointUnknowns[mode];updateCourtChecklist()}};
+const coreValidate=validate;validate=function(){
+  if(!coreValidate())return false;
+  if(session.server==='home'||v('serveResult')==='Opponent service error')return true;
+  if(v('serveResult')==='In play'&&v('passRating')!=='0'&&v('crossTouch')==='3'&&!v('secondContact')){tell('Choose who made the second contact. Use Unknown if the footage is unclear.');$('secondContact').focus();return false}
+  const missing=liveRequirements().filter(key=>!points[key]&&!pointUnknowns[key]);
+  if(missing.length){updateCourtChecklist();missing.forEach(key=>{const checkbox=courtChecklist.querySelector('[data-unknown-point="'+key+'"]');checkbox?.closest('.point-check')?.classList.add('missing-point')});courtChecklist.classList.add('validation-error');const message='Before saving, plot '+missing.map(key=>pointNames[key]).join(', ')+', or mark each unavailable.';$('courtValidation').textContent=message;tell(message);courtChecklist.scrollIntoView?.({behavior:'smooth',block:'center'});return false}return true;
+};
+const completeReset=resetRally;resetRally=function(){pointUnknowns={};completeReset();updateCourtChecklist()};
+const completeBuild=buildRow;buildRow=function(existing){const row=completeBuild(existing);const required=liveRequirements();row.point_unavailable=JSON.stringify(Object.fromEntries(required.filter(k=>pointUnknowns[k]).map(k=>[k,true])));row.court_data_status=!required.length?'N/A':required.every(k=>points[k])?'Complete':'Partial';return row};
+headers.push('point_unavailable','court_data_status');
+const completeLoad=loadRally;loadRally=function(i){pointUnknowns={};completeLoad(i);try{const parsed=JSON.parse(rallies[i].point_unavailable||'{}');if(parsed&&typeof parsed==='object')pointUnknowns=parsed}catch(e){}updateCourtChecklist()};
+const overview=document.createElement('section');overview.className='card';overview.id='dataOverview';overview.innerHTML=`<h2>Tournament insights</h2><p class="hint">Saved rallies only. Charts update when you save, edit, delete, import, or switch matches.</p><div class="row3"><div><label for="insightScope">Games to include</label><select id="insightScope"><option value="tournament">This tournament — all games</option><option value="current">Selected game only</option><option value="all">All tournaments</option></select></div><div><label for="insightTeam">Our team</label><select id="insightTeam"></select></div><div><label for="insightTournament">Tournament</label><select id="insightTournament"></select></div></div><p id="insightScopeLabel" class="hint"></p><div id="summaryMetrics" class="metrics"></div><p id="insightNote" class="hint"></p><div class="insight-grid"><div id="passChart"></div><div id="rotationChart"></div><div id="outcomeChart"></div></div><details><summary>What counts in these charts?</summary><p class="hint">First-ball side-out rate = Yes ÷ (Yes + No) among receiving rallies. Serving points, opponent service errors, and records without a Yes/No result are excluded. Pass charts also require a recorded rating from 0 to 3; untouched aces have no pass rating. Missing or Unknown values are not counted as zero. Receiving rally win rate includes opponent service errors. Court completeness counts whether all points expected for that play were recorded; partial court data can still contribute to outcome and pass charts. These charts describe the recorded sample, not proof of cause and effect. Compare sample sizes before drawing conclusions.</p></details>`;
+$('rows').closest('.card').before(overview);
+function insightRows(){let matches=v('insightScope')==='all'?workspace.matches:v('insightScope')==='tournament'?workspace.matches.filter(m=>m.tournamentId===currentTournament()?.id):[workspace.matches.find(m=>m.id===workspace.activeId)];return matches.filter(Boolean).filter(m=>!v('insightTeam')||m.session.home===v('insightTeam')).filter(m=>!v('insightTournament')||m.session.tournament===v('insightTournament')).flatMap(m=>m.id===workspace.activeId?rallies:m.rallies)}
+function selectOptions(id,values,allLabel){const old=v(id);$(id).innerHTML=`<option value="">${allLabel}</option>`+[...new Set(values.filter(Boolean))].sort().map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');if([...$(id).options].some(o=>o.value===old))$(id).value=old}
+function summarize(rows){
+ const receiving=rows.filter(r=>r.record_type!=='Serving point'&&r.serving_team!=='Our team');
+ const eligible=receiving.filter(r=>r.serve_result!=='Opponent service error'&&['Yes','No'].includes(r.successful_first_ball_sideout));
+ const rated=receiving.filter(r=>r.serve_result==='In play'&&['0','1','2','3'].includes(String(r.pass_rating)));
+ const final=receiving.filter(r=>['Won','Lost'].includes(r.final_rally_result));
+ const expected=receiving.filter(r=>requiredPointsFor(r).length);
+ return {receiving,eligible,rated,final,expected,wins:eligible.filter(r=>r.successful_first_ball_sideout==='Yes').length,full:expected.filter(r=>requiredPointsFor(r).every(key=>hasCoordinates(r,key))).length};
+}
+function rate(n,d){return d?(100*n/d).toFixed(1)+'%':'—'}
+function rateGroups(rows,field,keys){return keys.map(key=>{const group=rows.filter(r=>String(r[field])===key);return {label:key,n:group.length,wins:group.filter(r=>r.successful_first_ball_sideout==='Yes').length}})}
+function barChart(title,description,groups,percent=true){
+ const width=560,height=70+groups.length*51,max=percent?100:Math.max(1,...groups.map(g=>g.n));
+ const bars=groups.map((g,i)=>{const y=40+i*51,value=percent?(g.n?100*g.wins/g.n:0):g.n;const label=percent?(g.n?rate(g.wins,g.n)+' · '+g.wins+'/'+g.n:'No data'):g.n+' rallies';return `<text x="8" y="${y+17}" font-size="14">${esc(g.label)}</text><rect x="130" y="${y}" width="265" height="25" rx="4" fill="#edf2f3"/><rect x="130" y="${y}" width="${265*value/max}" height="25" rx="4" fill="#126b70"/><text x="405" y="${y+17}" font-size="13">${esc(label)}</text>`}).join('');
+ const tableRows=groups.map(g=>`<tr><td>${esc(g.label)}</td><td>${g.n}</td>${percent?`<td>${g.wins}</td><td>${rate(g.wins,g.n)}</td>`:''}</tr>`).join('');
+ return `<h3>${title}</h3><p class="hint">${description}</p><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(title)}" style="width:100%;height:auto"><title>${esc(title)}</title><text x="130" y="22" font-size="12">0${percent?'%':''}</text><text x="370" y="22" font-size="12">${percent?'100%':max}</text>${bars}</svg><details><summary>View chart data</summary><div class="insight-table"><table><thead><tr><th>Group</th><th>Rallies</th>${percent?'<th>First-ball wins</th><th>Rate</th>':''}</tr></thead><tbody>${tableRows}</tbody></table></div></details>`;
+}
+function renderDashboard(){
+ selectOptions('insightTeam',workspace.matches.map(m=>m.session.home),'All teams');selectOptions('insightTournament',workspace.matches.map(m=>m.session.tournament),'All tournaments');
+ const all=v('insightScope')==='all',single=v('insightScope')==='current';$('insightTeam').disabled=single;$('insightTournament').disabled=!all;if(single)$('insightTeam').value='';if(!all)$('insightTournament').value='';
+ $('insightScopeLabel').textContent=v('insightScope')==='tournament'?'Showing all games in '+(currentTournament()?.name||'this tournament')+'. Use Our team to keep different teams separate.':all?'Showing saved games matching these filters. Select a team for a team comparison.':'Showing '+(session.home||'My team')+' vs '+(session.away||'Opponent')+(session.tournament?' · '+session.tournament:'')+'.';
+ const rows=insightRows(),d=summarize(rows),finalWins=d.final.filter(r=>r.final_rally_result==='Won').length,avg=d.rated.length?(d.rated.reduce((sum,r)=>sum+Number(r.pass_rating),0)/d.rated.length).toFixed(2):'—';
+ $('summaryMetrics').innerHTML=[['Receiving rallies',d.receiving.length,rows.length+' total saved records'],['First-ball side-out',rate(d.wins,d.eligible.length),d.wins+' / '+d.eligible.length+' opportunities'],['Receiving rally wins',rate(finalWins,d.final.length),finalWins+' / '+d.final.length+' known final results'],['Average pass rating',avg,d.rated.length+' rated receptions · 0–3 scale'],['Complete court records',d.full+' / '+d.expected.length,'Receiving rallies that need court points']].map(([name,value,note])=>`<div class="metric"><span>${name}</span><b>${value}</b><span>${note}</span></div>`).join('');
+ $('insightNote').textContent=!rows.length?'No saved rallies in this selection yet. Record a rally to start building your summary.':d.eligible.length<10?'Small sample: '+d.eligible.length+' first-ball opportunities. Treat these results as descriptive; each chart shows its own sample size.':'Each chart shows its own sample size. Missing observations are excluded only from the metrics that need them.';
+ $('passChart').innerHTML=barChart('First-ball side-out by pass rating','Does first-ball success differ across recorded reception ratings?',rateGroups(d.eligible.filter(r=>r.serve_result==='In play'),'pass_rating',['0','1','2','3']));
+ $('rotationChart').innerHTML=barChart('First-ball side-out by rotation','Compare rotations using both the rate and number of rallies.',rateGroups(d.eligible,'rotation',rotationOrder));
+ const attacks=d.receiving.filter(r=>r.serve_result!=='Opponent service error');$('outcomeChart').innerHTML=barChart('First attack outcomes','Counts of recorded attack outcomes; aces and service errors have no attack outcome.',['Kill','Tool kill','Error','Blocked','Continued'].map(label=>({label,n:attacks.filter(r=>r.attack_outcome===label).length})),false);
+}
+for(const id of ['insightScope','insightTeam','insightTournament'])$(id).onchange=renderDashboard;
+const overviewTable=table;table=function(){overviewTable();renderDashboard()};
+ensureTournaments();activateMatch(workspace.matches.some(m=>m.id===workspace.activeId)?workspace.activeId:workspace.matches[0].id);if(!session.configured){if(currentTournament()?.name==='Untitled tournament'&&!session.home&&!setupDraft)$('newTournament').click();else openSetup();}
+
+</script>
+
+</body>
+</html>

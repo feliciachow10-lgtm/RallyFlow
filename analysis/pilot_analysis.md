@@ -102,7 +102,7 @@ Fisher's exact test found statistically significant evidence of an association b
 
 ### What I Took From This
 
-The direction of this result was not exactly shocking 😭. Being in-system is supposed to give an offense more options.
+The direction of this result was not exactly shocking. Being in-system is supposed to give an offense more options.
 
 What I think could become more interesting is connecting system status back to the spatial measurements RallyFlow collects. For example, I want to investigate how much setter displacement usually occurs before a rally gets classified as out-of-system and whether that boundary is actually consistent.
 
@@ -233,7 +233,7 @@ R6 had the highest observed first-ball side-out rate at **50% (5/10)**, while R1
 
 ### What I Took From This
 
-Okay, R6 definitely jumps off the graph 😭. But it only contains 10 rallies, so I do not want to treat 50% as a stable estimate yet.
+Okay, R6 definitely jumps off the graph. But it only contains 10 rallies, so I do not want to treat 50% as a stable estimate yet.
 
 This is exactly the kind of pattern I want to keep watching as the dataset grows. If R6 continues to perform differently after hundreds more rallies, then I can start digging into *why*—whether it is setter positioning, personnel, passing, available attackers, or something else.
 

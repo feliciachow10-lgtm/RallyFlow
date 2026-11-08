@@ -319,7 +319,7 @@ The biggest thing I got from this pilot was not one magic volleyball finding.
 
 It was evidence that RallyFlow is collecting enough detail to let me ask questions that would be difficult to answer from a normal stat sheet alone.
 
-Some results were statistically significant. Some showed interesting patterns but were way too small to trust yet. And some basically told me, "yeah...you need more data" 😭.
+Some results were statistically significant. Some showed interesting patterns but were way too small to trust yet. And some basically told me, "yeah...you need more data".
 
 Honestly, that was useful too.
 
